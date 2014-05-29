@@ -7110,3 +7110,7 @@ ER_IT_IS_A_VIEW 42S02
         eng "'%-.192s' is a view"
 ER_SLAVE_SKIP_NOT_IN_GTID
 	eng "When using GTID, @@sql_slave_skip_counter can not be used. Instead, setting @@gtid_slave_pos explicitly can be used to skip to after a given GTID position."
+ER_USER_CREATE_EXISTS
+        eng "Can't create user '%-.192s'; user exists"
+ER_USER_DROP_EXISTS
+        eng "Can't drop user '%-.192s'; user doesn't exist"

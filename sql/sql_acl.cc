@@ -9170,6 +9170,8 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
   List_iterator <LEX_USER> user_list(list);
   TABLE_LIST tables[GRANT_TABLES];
   bool some_users_created= FALSE;
+  uint create_options = thd->lex->create_info.options;
+
   DBUG_ENTER("mysql_create_user");
   DBUG_PRINT("entry", ("Handle as %s", handle_as_role ? "role" : "user"));
 
@@ -9215,10 +9217,18 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
     */
     if (handle_grant_data(tables, 0, user_name, NULL))
     {
-      append_user(thd, &wrong_users, user_name);
-
-      result= TRUE;
-      continue;
+      if (create_options & HA_LEX_CREATE_IF_NOT_EXISTS) {
+        push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+                            ER_USER_CREATE_EXISTS, ER(ER_USER_CREATE_EXISTS),
+                            user_name->user.str);
+        continue;
+      }
+      else
+      {
+        append_user(thd, &wrong_users, user_name);
+        result= TRUE;
+        continue;
+      }
     }
 
     some_users_created= TRUE;
@@ -9329,9 +9339,19 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 
     if (handle_grant_data(tables, 1, user_name, NULL) <= 0)
     {
-      append_user(thd, &wrong_users, user_name);
-      result= TRUE;
-      continue;
+      if (!thd->lex->check_exists)
+      {
+        append_user(thd, &wrong_users, user_name);
+        result= TRUE;
+        continue;
+      }
+      else
+      {
+        push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+                            ER_USER_DROP_EXISTS, ER(ER_USER_DROP_EXISTS),
+                            tmp_user_name->user.str);
+        continue;
+      }
     }
 
     some_users_deleted= TRUE;

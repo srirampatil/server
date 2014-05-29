@@ -1,0 +1,72 @@
+
+--disable_warnings
+DROP USER IF EXISTS u1, u2, u3;
+DROP ROLE IF EXISTS r1, r2, r3;
+--enable_warnings
+
+#
+# Normal create user
+#
+
+CREATE USER u1, u2;
+CREATE USER u3;
+
+#
+# Checking for some errors
+#
+
+--error ER_CANNOT_USER
+CREATE USER u1;
+
+
+#
+# Testing IF NOT EXISTS clause
+#
+
+--disable_warnings
+DROP USER u3;
+CREATE USER IF NOT EXISTS u1, u2;
+CREATE USER IF NOT EXISTS u3;
+--enable_warnings
+
+#
+# Testing DROP IF EXISTS
+#
+
+--disable_warnings
+DROP USER IF EXISTS u1, u2, u4;
+DROP USER IF EXISTS u3;
+--enable_warnings
+
+#
+# Normal CREATE ROLE
+#
+
+CREATE ROLE r1, r2;
+CREATE ROLE r3;
+
+#
+# Checking for errors
+#
+
+--error ER_CANNOT_USER
+CREATE ROLE r2;
+
+#
+# Testing IF NOT EXISTS clause
+#
+
+--disable_warnings
+DROP ROLE r3;
+CREATE ROLE IF NOT EXISTS r1, r2;
+CREATE ROLE IF NOT EXISTS r3;
+--enable_warnings
+
+#
+# Testing DROP IF EXISTS
+#
+
+--disable_warnings
+DROP ROLE IF EXISTS r1, r2, r4;
+DROP ROLE IF EXISTS r3;
+--enable_warnings

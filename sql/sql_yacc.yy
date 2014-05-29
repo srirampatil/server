@@ -2460,13 +2460,15 @@ create:
                MYSQL_YYABORT;
             }
           }
-        | CREATE USER clear_privileges grant_list
+        | CREATE USER opt_if_not_exists clear_privileges grant_list
           {
             Lex->sql_command = SQLCOM_CREATE_USER;
+            Lex->create_info.options = $3;
           }
-        | CREATE ROLE_SYM clear_privileges role_list opt_with_admin
+        | CREATE ROLE_SYM opt_if_not_exists clear_privileges role_list opt_with_admin
           {
             Lex->sql_command = SQLCOM_CREATE_ROLE;
+            Lex->create_info.options= $3;
           }
         | CREATE LOGFILE_SYM GROUP_SYM logfile_group_info 
           {
@@ -11762,13 +11764,15 @@ drop:
             lex->check_exists= $3;
             lex->spname= $4;
           }
-        | DROP USER clear_privileges user_list
+        | DROP USER opt_if_exists clear_privileges user_list
           {
             Lex->sql_command = SQLCOM_DROP_USER;
+            Lex->check_exists= $3;
           }
-        | DROP ROLE_SYM clear_privileges role_list
+        | DROP ROLE_SYM opt_if_exists clear_privileges role_list
           {
             Lex->sql_command = SQLCOM_DROP_ROLE;
+            Lex->check_exists= $3;
           }
         | DROP VIEW_SYM opt_if_exists
           {
