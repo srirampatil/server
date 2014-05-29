@@ -984,6 +984,7 @@ delete_server_record(TABLE *table,
 int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
 {
   int error= ER_FOREIGN_SERVER_EXISTS;
+  uint create_options = thd->lex->create_info.options;
   FOREIGN_SERVER *server;
 
   DBUG_ENTER("create_server");
@@ -995,8 +996,17 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   /* hit the memory first */
   if (my_hash_search(&servers_cache, (uchar*) server_options->server_name,
                      server_options->server_name_length))
+  {
+    if (create_options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    {
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+                          ER_FOREIGN_SERVER_EXISTS,
+                          ER(ER_FOREIGN_SERVER_EXISTS),
+                          server_options->server_name);
+      error= 0;
+    }
     goto end;
-
+  }
 
   if (!(server= prepare_server_struct_for_insert(server_options)))
   {
@@ -1012,6 +1022,16 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
 
 end:
   mysql_rwlock_unlock(&THR_LOCK_servers);
+
+  if (error)
+  {
+    DBUG_PRINT("info", ("problem creating server <%s>",
+                        server_options->server_name));
+    my_error(error, MYF(0), server_options->server_name);
+  }
+  else
+    my_ok(thd);
+
   DBUG_RETURN(error);
 }
 

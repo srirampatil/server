@@ -1,8 +1,46 @@
 # Generic tests for servers (do not require FEDERATED)
 
+#
+# DROP SERVER first
+#
+
+--disable_warnings
+DROP SERVER IF EXISTS s1;
+DROP SERVER IF EXISTS s2;
+DROP SERVER IF EXISTS s3;
+--enable_warnings
+
 --echo #
 --echo # MDEV-4594 - CREATE SERVER crashes embedded
 --echo #
 CREATE SERVER s1 FOREIGN DATA WRAPPER mysql OPTIONS(HOST 'localhost');
 SELECT * FROM mysql.servers;
-DROP SERVER s1;
+
+CREATE SERVER s2 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+
+#
+# Errors
+#
+
+--error 1476
+CREATE SERVER s1 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+
+#
+# IF NOT EXISTS
+#
+
+--disable_warnings
+CREATE SERVER IF NOT EXISTS s1 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+CREATE SERVER IF NOT EXISTS s3 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+--enable_warnings
+
+#
+# DROP IF EXISTS
+#
+
+--disable_warnings
+DROP SERVER IF EXISTS s1;
+DROP SERVER IF EXISTS s2;
+DROP SERVER IF EXISTS s3;
+DROP SERVER IF EXISTS s3;
+--enable_warnings

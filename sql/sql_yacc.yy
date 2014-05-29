@@ -2485,15 +2485,16 @@ create:
         ;
 
 server_def:
-          SERVER_SYM
+          SERVER_SYM opt_if_not_exists
           ident_or_text
           FOREIGN DATA_SYM WRAPPER_SYM
           ident_or_text
           OPTIONS_SYM '(' server_options_list ')'
           {
-            Lex->server_options.server_name= $2.str;
-            Lex->server_options.server_name_length= $2.length;
-            Lex->server_options.scheme= $6.str;
+            Lex->server_options.server_name= $3.str;
+            Lex->server_options.server_name_length= $3.length;
+            Lex->server_options.scheme= $7.str;
+            Lex->create_info.options = $2;
           }
         ;
 
