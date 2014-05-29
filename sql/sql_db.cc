@@ -46,6 +46,8 @@
 #include <direct.h>
 #endif
 #include "debug_sync.h"
+#include "sql_parse.h"                   // for check_access method used in mysql_create_db
+#include "sql_error.h"
 
 #define MAX_DROP_TABLE_Q_LEN      1024
 
@@ -598,30 +600,50 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
 
   if (mysql_file_stat(key_file_misc, path, &stat_info, MYF(0)))
   {
-    if (!(create_options & HA_LEX_CREATE_IF_NOT_EXISTS))
+    if (create_options & HA_LEX_CREATE_REPLACE)
+    {
+      /* Need to check access permissions before dropping database. */
+      if (check_access(thd, DROP_ACL, db, NULL, NULL, 1, 0))
+        DBUG_RETURN(1);
+
+      /* Removing old database. */
+      if (mysql_rm_db(thd, db, 0, 0))
+        DBUG_RETURN(1);
+
+      /*
+        Reset the diagnostics m_status. It might be set ot DA_OK in
+        mysql_rm_db.
+      */
+      thd->get_stmt_da()->reset_diagnostics_area();
+      goto mkdir;
+    }
+    else if (!(create_options & HA_LEX_CREATE_IF_NOT_EXISTS))
     {
       my_error(ER_DB_CREATE_EXISTS, MYF(0), db);
       error= -1;
       goto exit;
     }
-    push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+    else
+    {
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
 			ER_DB_CREATE_EXISTS, ER(ER_DB_CREATE_EXISTS), db);
-    error= 0;
-    goto not_silent;
+      error= 0;
+      goto not_silent;
+    }
   }
-  else
+
+  if (my_errno != ENOENT)
   {
-    if (my_errno != ENOENT)
-    {
-      my_error(EE_STAT, MYF(0), path, my_errno);
-      goto exit;
-    }
-    if (my_mkdir(path,0777,MYF(0)) < 0)
-    {
-      my_error(ER_CANT_CREATE_DB, MYF(0), db, my_errno);
-      error= -1;
-      goto exit;
-    }
+    my_error(EE_STAT, MYF(0), path, my_errno);
+    goto exit;
+  }
+
+mkdir:
+  if (my_mkdir(path,0777,MYF(0)) < 0)
+  {
+    my_error(ER_CANT_CREATE_DB, MYF(0), db, my_errno);
+    error= -1;
+    goto exit;
   }
 
   path[path_len-1]= FN_LIBCHAR;
