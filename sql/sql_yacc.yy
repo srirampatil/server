@@ -15945,12 +15945,21 @@ view_suid:
         ;
 
 view_tail:
-          view_suid VIEW_SYM table_ident
+          view_suid VIEW_SYM opt_if_not_exists table_ident
           {
             LEX *lex= thd->lex;
+
+            if (lex->create_view_mode == VIEW_CREATE_OR_REPLACE && $3)
+            {
+               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+               MYSQL_YYABORT;
+            }
+
+            lex->create_info.options = $3;
+
             lex->sql_command= SQLCOM_CREATE_VIEW;
             /* first table in list is target VIEW name */
-            if (!lex->select_lex.add_table_to_list(thd, $3, NULL,
+            if (!lex->select_lex.add_table_to_list(thd, $4, NULL,
                                                    TL_OPTION_UPDATING,
                                                    TL_IGNORE,
                                                    MDL_EXCLUSIVE))
