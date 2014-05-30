@@ -1,3 +1,6 @@
+DROP SERVER IF EXISTS s1;
+DROP SERVER IF EXISTS s2;
+DROP SERVER IF EXISTS s3;
 #
 # MDEV-4594 - CREATE SERVER crashes embedded
 #
@@ -5,4 +8,12 @@ CREATE SERVER s1 FOREIGN DATA WRAPPER mysql OPTIONS(HOST 'localhost');
 SELECT * FROM mysql.servers;
 Server_name	Host	Db	Username	Password	Port	Socket	Wrapper	Owner
 s1	localhost				0		mysql	
-DROP SERVER s1;
+CREATE SERVER s2 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+CREATE SERVER s1 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+ERROR HY000: The foreign server, s1, you are trying to create already exists.
+CREATE SERVER IF NOT EXISTS s1 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+CREATE SERVER IF NOT EXISTS s3 FOREIGN DATA WRAPPER mysql OPTIONS (HOST 'localhost');
+DROP SERVER IF EXISTS s1;
+DROP SERVER IF EXISTS s2;
+DROP SERVER IF EXISTS s3;
+DROP SERVER IF EXISTS s3;
