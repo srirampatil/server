@@ -6,6 +6,9 @@ CREATE USER u1;
 ERROR HY000: Operation CREATE USER failed for 'u1'@'%'
 DROP USER u3;
 CREATE USER IF NOT EXISTS u1, u2;
+Warnings:
+Note	1967	Can't create 'u1'; it already exists
+Note	1967	Can't create 'u2'; it already exists
 CREATE USER IF NOT EXISTS u3;
 DROP USER IF EXISTS u1, u2, u4;
 DROP USER IF EXISTS u3;
@@ -15,6 +18,9 @@ CREATE ROLE r2;
 ERROR HY000: Operation CREATE ROLE failed for 'r2'
 DROP ROLE r3;
 CREATE ROLE IF NOT EXISTS r1, r2;
+Warnings:
+Note	1967	Can't create 'r1'; it already exists
+Note	1967	Can't create 'r2'; it already exists
 CREATE ROLE IF NOT EXISTS r3;
 DROP ROLE IF EXISTS r1, r2, r4;
 DROP ROLE IF EXISTS r3;

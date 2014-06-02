@@ -23,11 +23,9 @@ CREATE USER u1;
 # Testing IF NOT EXISTS clause
 #
 
---disable_warnings
 DROP USER u3;
 CREATE USER IF NOT EXISTS u1, u2;
 CREATE USER IF NOT EXISTS u3;
---enable_warnings
 
 #
 # Testing DROP IF EXISTS
@@ -56,11 +54,9 @@ CREATE ROLE r2;
 # Testing IF NOT EXISTS clause
 #
 
---disable_warnings
 DROP ROLE r3;
 CREATE ROLE IF NOT EXISTS r1, r2;
 CREATE ROLE IF NOT EXISTS r3;
---enable_warnings
 
 #
 # Testing DROP IF EXISTS
