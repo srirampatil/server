@@ -16284,7 +16284,7 @@ sf_tail:
         ;
 
 sp_tail:
-          PROCEDURE_SYM remember_name sp_name
+          PROCEDURE_SYM opt_if_not_exists remember_name sp_name
           {
             LEX *lex= Lex;
             sp_head *sp;
@@ -16295,7 +16295,8 @@ sp_tail:
               MYSQL_YYABORT;
             }
 
-            lex->stmt_definition_begin= $2;
+            lex->create_info.options= $2;
+            lex->stmt_definition_begin= $3;
 
             /* Order is important here: new - reset - init */
             sp= new sp_head();
@@ -16304,8 +16305,9 @@ sp_tail:
             sp->reset_thd_mem_root(thd);
             sp->init(lex);
             sp->m_type= TYPE_ENUM_PROCEDURE;
-            sp->init_sp_name(thd, $3);
+            sp->init_sp_name(thd, $4);
 
+            lex->spname = $4;
             lex->sphead= sp;
           }
           '('

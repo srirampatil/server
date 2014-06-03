@@ -1015,6 +1015,21 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
     ret= SP_OPEN_TABLE_FAILED;
   else
   {
+    /* Checking if the routine already exists */
+    if(db_find_routine_aux(thd, type, thd->lex->spname, table) == SP_OK)
+    {
+      if (thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS) {
+        push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+                            ER_SP_ALREADY_EXISTS, ER(ER_SP_ALREADY_EXISTS),
+                            "PROCEDURE", thd->lex->spname->m_name.str);
+        ret= SP_OK;
+      }
+      else
+        ret= SP_WRITE_ROW_FAILED;
+
+      goto done;
+    }
+
     restore_record(table, s->default_values); // Get default values for fields
 
     /* NOTE: all needed privilege checks have been already done. */
