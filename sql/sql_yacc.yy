@@ -16037,23 +16037,24 @@ view_check_option:
 trigger_tail:
           TRIGGER_SYM
           remember_name
+          opt_if_not_exists
           sp_name
           trg_action_time
           trg_event
           ON
-          remember_name /* $7 */
-          { /* $8 */
+          remember_name /* $8 */
+          { /* $9 */
             Lex->raw_trg_on_table_name_begin= YYLIP->get_tok_start();
           }
-          table_ident /* $9 */
+          table_ident /* $10 */
           FOR_SYM
-          remember_name /* $11 */
-          { /* $12 */
+          remember_name /* $12 */
+          { /* $13 */
             Lex->raw_trg_on_table_name_end= YYLIP->get_tok_start();
           }
           EACH_SYM
           ROW_SYM
-          { /* $15 */
+          { /* $16 */
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
             sp_head *sp;
@@ -16069,24 +16070,25 @@ trigger_tail:
             sp->reset_thd_mem_root(thd);
             sp->init(lex);
             sp->m_type= TYPE_ENUM_TRIGGER;
-            sp->init_sp_name(thd, $3);
+            sp->init_sp_name(thd, $4);
             lex->stmt_definition_begin= $2;
-            lex->ident.str= $7;
-            lex->ident.length= $11 - $7;
+            lex->ident.str= $8;
+            lex->ident.length= $12 - $8;
 
             lex->sphead= sp;
-            lex->spname= $3;
+            lex->spname= $4;
 
             bzero((char *)&lex->sp_chistics, sizeof(st_sp_chistics));
             lex->sphead->m_chistics= &lex->sp_chistics;
             lex->sphead->set_body_start(thd, lip->get_cpp_ptr());
           }
-          sp_proc_stmt /* $16 */
-          { /* $17 */
+          sp_proc_stmt /* $17 */
+          { /* $18 */
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
 
             lex->sql_command= SQLCOM_CREATE_TRIGGER;
+            lex->create_info.options = $3;
             sp->set_stmt_end(thd);
             sp->restore_thd_mem_root(thd);
 
@@ -16098,7 +16100,7 @@ trigger_tail:
               sp_proc_stmt alternatives are not saving/restoring LEX, so
               lex->query_tables can be wiped out.
             */
-            if (!lex->select_lex.add_table_to_list(thd, $9,
+            if (!lex->select_lex.add_table_to_list(thd, $10,
                                                    (LEX_STRING*) 0,
                                                    TL_OPTION_UPDATING,
                                                    TL_READ_NO_INSERT,

@@ -2611,3 +2611,31 @@ DROP TABLE t1, t2;
 
 --echo End of 5.3 tests.
 
+--echo #
+--echo # Testing CREATE TRIGGER IF NOT EXISTS
+--echo #
+
+--disable_warnings
+DROP DATABASE IF EXISTS db1;
+DROP TABLE IF EXISTS t1;
+DROP TABLE IF EXISTS t2;
+--enable_warnings
+
+CREATE DATABASE db1;
+USE db1;
+CREATE TABLE t1 (val INT);
+CREATE TRIGGER val_sum BEFORE INSERT ON t1 FOR EACH ROW SET @sum = @sum + NEW.val;
+SET @sum=0;
+INSERT INTO t1 VALUES (10), (20), (30);
+SELECT @sum;
+
+--error ER_NOT_SUPPORTED_YET
+CREATE TRIGGER IF NOT EXISTS val_sum BEFORE INSERT ON t1 FOR EACH ROW SET @sum = @sum + NEW.val;
+
+CREATE TRIGGER IF NOT EXISTS val_sum AFTER INSERT ON t1 FOR EACH ROW SET @sum = @sum + NEW.val;
+
+--disable_warnings
+DROP TRIGGER IF EXISTS val_sum;
+DROP TABLE t1;
+DROP DATABASE db1;
+--enable_warnings

@@ -721,6 +721,14 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   /* Use the filesystem to enforce trigger namespace constraints. */
   if (!access(trigname_buff, F_OK))
   {
+    if (lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    {
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+                          ER_TRG_ALREADY_EXISTS, ER(ER_TRG_ALREADY_EXISTS),
+                          trigname_buff);
+      return 0;
+    }
+
     my_error(ER_TRG_ALREADY_EXISTS, MYF(0));
     return 1;
   }
