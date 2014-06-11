@@ -1,0 +1,76 @@
+--echo #
+--echo # Testing CREATE PROCEDURE IF NOT EXISTS
+--echo #
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+DROP PROCEDURE IF EXISTS proc1;
+--enable_warnings
+
+CREATE TABLE t1 (id INT);
+DELIMITER $$;
+CREATE PROCEDURE proc1 (OUT cnt INT) BEGIN SELECT COUNT(*) INTO cnt FROM t1; END$$
+DELIMITER ;$$
+CALL proc1(@cnt);
+SELECT @cnt;
+INSERT INTO t1 VALUES (1), (2), (3);
+CALL proc1(@cnt);
+SELECT @cnt;
+
+DELIMITER $$;
+--error 1304
+CREATE PROCEDURE proc1 (OUT cnt INT) BEGIN SELECT COUNT(*) INTO cnt FROM t1; END$$
+
+CREATE PROCEDURE IF NOT EXISTS proc1 (OUT cnt INT) BEGIN SELECT COUNT(*) INTO cnt FROM t1; END$$
+DELIMITER ;$$
+DROP PROCEDURE proc1;
+DELIMITER $$;
+CREATE PROCEDURE IF NOT EXISTS proc1 (OUT cnt INT) BEGIN SELECT COUNT(*) INTO cnt FROM t1; END$$
+DELIMITER ;$$
+INSERT INTO t1 VALUES (1), (2), (3);
+CALL proc1(@cnt);
+SELECT @cnt;
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+DROP PROCEDURE IF EXISTS proc1;
+--enable_warnings
+
+--echo #
+--echo # End of CREATE IF NOT EXISTS PROCEDURE
+--echo #
+
+--echo #
+--echo # Testing CREATE FUNCTION IF NOT EXISTS test
+--echo #
+
+--disable_warnings
+DROP FUNCTION IF EXISTS f1;
+--enable_warnings
+
+CREATE FUNCTION f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+SELECT f1('world');
+
+--error 1304
+CREATE FUNCTION f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+
+CREATE FUNCTION IF NOT EXISTS f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+DROP FUNCTION f1;
+CREATE FUNCTION IF NOT EXISTS f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+SELECT f1('world');
+
+--disable_warnings
+DROP FUNCTION IF EXISTS f1;
+--enable_warnings
+
+--echo #
+--echo # End of CREATE FUNCTION IF NOT EXISTS test
+--echo #

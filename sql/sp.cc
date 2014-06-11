@@ -1018,10 +1018,12 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
     /* Checking if the routine already exists */
     if(db_find_routine_aux(thd, type, thd->lex->spname, table) == SP_OK)
     {
-      if (thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS) {
+      if (thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+      {
         push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
-                            ER_SP_ALREADY_EXISTS, ER(ER_SP_ALREADY_EXISTS),
-                            "PROCEDURE", thd->lex->spname->m_name.str);
+                              ER_SP_ALREADY_EXISTS, ER(ER_SP_ALREADY_EXISTS),
+                              (type == TYPE_ENUM_FUNCTION) ? "FUNCTION" : "PROCEDURE",
+                              thd->lex->spname->m_name.str);
         ret= SP_OK;
       }
       else

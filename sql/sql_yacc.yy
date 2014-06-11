@@ -16116,7 +16116,24 @@ trigger_tail:
 **************************************************************************/
 
 udf_tail:
-          AGGREGATE_SYM remember_name FUNCTION_SYM ident
+          AGGREGATE_SYM remember_name FUNCTION_SYM opt_if_not_exists ident
+          RETURNS_SYM udf_type SONAME_SYM TEXT_STRING_sys
+          {
+            LEX *lex= thd->lex;
+            if (is_native_function(thd, & $5))
+            {
+              my_error(ER_NATIVE_FCT_NAME_COLLISION, MYF(0),
+                       $5.str);
+              MYSQL_YYABORT;
+            }
+            lex->sql_command = SQLCOM_CREATE_FUNCTION;
+            lex->udf.type= UDFTYPE_AGGREGATE;
+            lex->stmt_definition_begin= $2;
+            lex->udf.name = $5;
+            lex->udf.returns=(Item_result) $7;
+            lex->udf.dl=$9.str;
+          }
+        | remember_name FUNCTION_SYM opt_if_not_exists ident
           RETURNS_SYM udf_type SONAME_SYM TEXT_STRING_sys
           {
             LEX *lex= thd->lex;
@@ -16127,44 +16144,28 @@ udf_tail:
               MYSQL_YYABORT;
             }
             lex->sql_command = SQLCOM_CREATE_FUNCTION;
-            lex->udf.type= UDFTYPE_AGGREGATE;
-            lex->stmt_definition_begin= $2;
+            lex->udf.type= UDFTYPE_FUNCTION;
+            lex->stmt_definition_begin= $1;
             lex->udf.name = $4;
             lex->udf.returns=(Item_result) $6;
             lex->udf.dl=$8.str;
-          }
-        | remember_name FUNCTION_SYM ident
-          RETURNS_SYM udf_type SONAME_SYM TEXT_STRING_sys
-          {
-            LEX *lex= thd->lex;
-            if (is_native_function(thd, & $3))
-            {
-              my_error(ER_NATIVE_FCT_NAME_COLLISION, MYF(0),
-                       $3.str);
-              MYSQL_YYABORT;
-            }
-            lex->sql_command = SQLCOM_CREATE_FUNCTION;
-            lex->udf.type= UDFTYPE_FUNCTION;
-            lex->stmt_definition_begin= $1;
-            lex->udf.name = $3;
-            lex->udf.returns=(Item_result) $5;
-            lex->udf.dl=$7.str;
           }
         ;
 
 sf_tail:
           remember_name /* $1 */
           FUNCTION_SYM /* $2 */
-          sp_name /* $3 */
-          '(' /* $4 */
-          { /* $5 */
+          opt_if_not_exists /* $3 */
+          sp_name /* $4 */
+          '(' /* $5 */
+          { /* $6 */
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
             sp_head *sp;
             const char* tmp_param_begin;
 
             lex->stmt_definition_begin= $1;
-            lex->spname= $3;
+            lex->spname= $4;
 
             if (lex->sphead)
             {
@@ -16186,13 +16187,13 @@ sf_tail:
             tmp_param_begin++;
             lex->sphead->m_param_begin= tmp_param_begin;
           }
-          sp_fdparam_list /* $6 */
-          ')' /* $7 */
-          { /* $8 */
+          sp_fdparam_list /* $7 */
+          ')' /* $8 */
+          { /* $9 */
             Lex->sphead->m_param_end= YYLIP->get_cpp_tok_start();
           }
-          RETURNS_SYM /* $9 */
-          { /* $10 */
+          RETURNS_SYM /* $10 */
+          { /* $11 */
             LEX *lex= Lex;
             lex->charset= NULL;
             lex->length= lex->dec= NULL;
@@ -16200,8 +16201,8 @@ sf_tail:
             lex->type= 0;
             lex->vcol_info= 0;
           }
-          type_with_opt_collate /* $11 */
-          { /* $12 */
+          type_with_opt_collate /* $12 */
+          { /* $13 */
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
             /*
@@ -16209,7 +16210,7 @@ sf_tail:
               When collation support in SP is implemented, then this test
               should be removed.
             */
-            if (($11 == MYSQL_TYPE_STRING || $11 == MYSQL_TYPE_VARCHAR)
+            if (($12 == MYSQL_TYPE_STRING || $12 == MYSQL_TYPE_VARCHAR)
                 && (lex->type & BINCMP_FLAG))
             {
               my_error(ER_NOT_SUPPORTED_YET, MYF(0), "return value collation");
@@ -16217,21 +16218,21 @@ sf_tail:
             }
 
             if (sp->fill_field_definition(thd, lex,
-                                          (enum enum_field_types) $11,
+                                          (enum enum_field_types) $12,
                                           &sp->m_return_field_def))
               MYSQL_YYABORT;
 
             bzero((char *)&lex->sp_chistics, sizeof(st_sp_chistics));
           }
-          sp_c_chistics /* $13 */
-          { /* $14 */
+          sp_c_chistics /* $14 */
+          { /* $15 */
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
 
             lex->sphead->m_chistics= &lex->sp_chistics;
             lex->sphead->set_body_start(thd, lip->get_cpp_tok_start());
           }
-          sp_proc_stmt /* $15 */
+          sp_proc_stmt /* $16 */
           {
             LEX *lex= thd->lex;
             sp_head *sp= lex->sphead;
@@ -16240,6 +16241,8 @@ sf_tail:
               MYSQL_YYABORT;
 
             lex->sql_command= SQLCOM_CREATE_SPFUNCTION;
+            lex->create_info.options= $3;
+
             sp->set_stmt_end(thd);
             if (!(sp->m_flags & sp_head::HAS_RETURN))
             {
