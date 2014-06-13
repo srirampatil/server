@@ -467,6 +467,15 @@ int mysql_create_function(THD *thd,udf_func *udf)
   DEBUG_SYNC(current_thd, "mysql_create_function_after_lock");
   if ((my_hash_search(&udf_hash,(uchar*) udf->name.str, udf->name.length)))
   {
+    if (thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    {
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE, ER_UDF_EXISTS,
+                          ER(ER_UDF_EXISTS), udf->name.str);
+
+      mysql_rwlock_unlock(&THR_LOCK_udf);
+      DBUG_RETURN(0);
+    }
+
     my_error(ER_UDF_EXISTS, MYF(0), udf->name.str);
     goto err;
   }
@@ -569,6 +578,15 @@ int mysql_drop_function(THD *thd,const LEX_STRING *udf_name)
   if (!(udf=(udf_func*) my_hash_search(&udf_hash,(uchar*) udf_name->str,
                                        (uint) udf_name->length)))
   {
+    if (thd->lex->check_exists)
+    {
+      push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+                          ER_FUNCTION_NOT_DEFINED, ER(ER_FUNCTION_NOT_DEFINED),
+                          udf_name->str);
+      mysql_rwlock_unlock(&THR_LOCK_udf);
+      DBUG_RETURN(0);
+    }
+
     my_error(ER_FUNCTION_NOT_DEFINED, MYF(0), udf_name->str);
     goto err;
   }

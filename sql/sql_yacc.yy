@@ -16127,6 +16127,7 @@ udf_tail:
               MYSQL_YYABORT;
             }
             lex->sql_command = SQLCOM_CREATE_FUNCTION;
+            lex->create_info.options= $4;
             lex->udf.type= UDFTYPE_AGGREGATE;
             lex->stmt_definition_begin= $2;
             lex->udf.name = $5;
@@ -16144,6 +16145,7 @@ udf_tail:
               MYSQL_YYABORT;
             }
             lex->sql_command = SQLCOM_CREATE_FUNCTION;
+            lex->create_info.options= $3;
             lex->udf.type= UDFTYPE_FUNCTION;
             lex->stmt_definition_begin= $1;
             lex->udf.name = $4;

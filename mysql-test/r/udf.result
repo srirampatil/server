@@ -445,3 +445,19 @@ DROP FUNCTION myfunc_double;
 DROP TABLE t1;
 #
 End of 5.1 tests.
+#
+# Testing CREATE FUNCTION IF NOT EXISTS
+#
+DROP FUNCTION IF EXISTS metaphon;
+CREATE FUNCTION metaphon RETURNS STRING SONAME "UDF_EXAMPLE_LIB";
+CREATE FUNCTION metaphon RETURNS INT SONAME "$UDF_EXAMPLE_SO";
+ERROR HY000: Function 'metaphon' already exists
+CREATE FUNCTION IF NOT EXISTS metaphon RETURNS STRING SONAME "udf_example.so";
+Warnings:
+Note	1125	Function 'metaphon' already exists
+DROP FUNCTION IF EXISTS metaphon;
+CREATE FUNCTION IF NOT EXISTS metaphon RETURNS STRING SONAME "udf_example.so";
+CREATE FUNCTION IF NOT EXISTS metaphon RETURNS STRING SONAME "udf_example.so";
+Warnings:
+Note	1125	Function 'metaphon' already exists
+DROP FUNCTION IF EXISTS metaphon;
