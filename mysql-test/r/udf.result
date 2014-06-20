@@ -461,3 +461,6 @@ CREATE FUNCTION IF NOT EXISTS metaphon RETURNS STRING SONAME "udf_example.so";
 Warnings:
 Note	1125	Function 'metaphon' already exists
 DROP FUNCTION IF EXISTS metaphon;
+DROP FUNCTION IF EXISTS metaphon;
+Warnings:
+Note	1305	FUNCTION test.metaphon does not exist

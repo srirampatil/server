@@ -636,6 +636,11 @@ bool mysql_create_view(THD *thd, TABLE_LIST *views,
                 command[thd->lex->create_view_mode].length);
     view_store_options(thd, views, &buff);
     buff.append(STRING_WITH_LEN("VIEW "));
+
+    /* Appending IF NOT EXISTS if present in the query */
+    if(lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+      buff.append(STRING_WITH_LEN("IF NOT EXISTS "));
+
     /* Test if user supplied a db (ie: we did not use thd->db) */
     if (views->db && views->db[0] &&
         (thd->db == NULL || strcmp(views->db, thd->db)))

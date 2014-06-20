@@ -1195,41 +1195,42 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
 
     if (ret == SP_OK)
       sp_cache_invalidate();
-
-    if (ret == SP_OK && mysql_bin_log.is_open())
-    {
-      thd->clear_error();
-
-      String log_query;
-      log_query.set_charset(system_charset_info);
-
-      if (!create_string(thd, &log_query,
-                         sp->m_type,
-                         (sp->m_explicit_name ? sp->m_db.str : NULL), 
-                         (sp->m_explicit_name ? sp->m_db.length : 0), 
-                         sp->m_name.str, sp->m_name.length,
-                         sp->m_params.str, sp->m_params.length,
-                         retstr.ptr(), retstr.length(),
-                         sp->m_body.str, sp->m_body.length,
-                         sp->m_chistics, &(thd->lex->definer->user),
-                         &(thd->lex->definer->host),
-                         saved_mode))
-      {
-        ret= SP_INTERNAL_ERROR;
-        goto done;
-      }
-      /* restore sql_mode when binloging */
-      thd->variables.sql_mode= saved_mode;
-      /* Such a statement can always go directly to binlog, no trans cache */
-      if (thd->binlog_query(THD::STMT_QUERY_TYPE,
-                            log_query.ptr(), log_query.length(),
-                            FALSE, FALSE, FALSE, 0))
-        ret= SP_INTERNAL_ERROR;
-      thd->variables.sql_mode= 0;
-    }
   }
 
 done:
+  if (ret == SP_OK && mysql_bin_log.is_open())
+  {
+    thd->clear_error();
+
+    String log_query;
+    log_query.set_charset(system_charset_info);
+
+    if (!create_string(thd, &log_query,
+                       sp->m_type,
+                       (sp->m_explicit_name ? sp->m_db.str : NULL), 
+                       (sp->m_explicit_name ? sp->m_db.length : 0), 
+                       sp->m_name.str, sp->m_name.length,
+                       sp->m_params.str, sp->m_params.length,
+                       retstr.ptr(), retstr.length(),
+                       sp->m_body.str, sp->m_body.length,
+                       sp->m_chistics, &(thd->lex->definer->user),
+                       &(thd->lex->definer->host),
+                       saved_mode))
+    {
+      ret= SP_INTERNAL_ERROR;
+      goto done;
+    }
+    /* restore sql_mode when binloging */
+    thd->variables.sql_mode= saved_mode;
+    /* Such a statement can always go directly to binlog, no trans cache */
+    if (thd->binlog_query(THD::STMT_QUERY_TYPE,
+                          log_query.ptr(), log_query.length(),
+                          FALSE, FALSE, FALSE, 0))
+      ret= SP_INTERNAL_ERROR;
+
+    thd->variables.sql_mode= 0;
+  }
+
   thd->count_cuted_fields= saved_count_cuted_fields;
   thd->variables.sql_mode= saved_mode;
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
@@ -2170,6 +2171,10 @@ create_string(THD *thd, String *buf,
     buf->append(STRING_WITH_LEN("FUNCTION "));
   else
     buf->append(STRING_WITH_LEN("PROCEDURE "));
+
+  if(thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    buf->append(STRING_WITH_LEN("IF NOT EXISTS "));
+
   if (dblen > 0)
   {
     append_identifier(thd, buf, db, dblen);

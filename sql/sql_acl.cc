@@ -9164,7 +9164,7 @@ end:
 
 bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 {
-  int result;
+  int result= FALSE;
   String wrong_users;
   LEX_USER *user_name;
   List_iterator <LEX_USER> user_list(list);
@@ -9278,7 +9278,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
              (handle_as_role) ? "CREATE ROLE" : "CREATE USER",
              wrong_users.c_ptr_safe());
 
-  if (some_users_created)
+  if (some_users_created || !result)
     result |= write_bin_log(thd, FALSE, thd->query(), thd->query_length());
 
   mysql_rwlock_unlock(&LOCK_grant);
@@ -9300,7 +9300,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 
 bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 {
-  int result;
+  int result= FALSE;
   String wrong_users;
   LEX_USER *user_name, *tmp_user_name;
   List_iterator <LEX_USER> user_list(list);
@@ -9376,7 +9376,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
              (handle_as_role) ? "DROP ROLE" : "DROP USER",
              wrong_users.c_ptr_safe());
 
-  if (some_users_deleted)
+  if (some_users_deleted || !result)
     result |= write_bin_log(thd, FALSE, thd->query(), thd->query_length());
 
   mysql_rwlock_unlock(&LOCK_grant);

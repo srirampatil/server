@@ -472,8 +472,7 @@ int mysql_create_function(THD *thd,udf_func *udf)
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE, ER_UDF_EXISTS,
                           ER(ER_UDF_EXISTS), udf->name.str);
 
-      mysql_rwlock_unlock(&THR_LOCK_udf);
-      DBUG_RETURN(0);
+      goto done;
     }
 
     my_error(ER_UDF_EXISTS, MYF(0), udf->name.str);
@@ -535,6 +534,8 @@ int mysql_create_function(THD *thd,udf_func *udf)
     del_udf(u_d);
     goto err;
   }
+
+done:
   mysql_rwlock_unlock(&THR_LOCK_udf);
 
   /* Binlog the create function. */
@@ -583,8 +584,7 @@ int mysql_drop_function(THD *thd,const LEX_STRING *udf_name)
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_FUNCTION_NOT_DEFINED, ER(ER_FUNCTION_NOT_DEFINED),
                           udf_name->str);
-      mysql_rwlock_unlock(&THR_LOCK_udf);
-      DBUG_RETURN(0);
+      goto done;
     }
 
     my_error(ER_FUNCTION_NOT_DEFINED, MYF(0), udf_name->str);
@@ -613,6 +613,8 @@ int mysql_drop_function(THD *thd,const LEX_STRING *udf_name)
     if ((error = table->file->ha_delete_row(table->record[0])))
       table->file->print_error(error, MYF(0));
   }
+
+done:
   mysql_rwlock_unlock(&THR_LOCK_udf);
 
   /*
