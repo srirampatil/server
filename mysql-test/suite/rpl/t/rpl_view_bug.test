@@ -1,0 +1,31 @@
+source include/master-slave.inc;
+--disable_warnings
+drop table if exists t1;
+drop view if exists v1,v2;
+sync_slave_with_master;
+reset master;
+--enable_warnings
+
+--echo #
+--echo # Check the bug where if n error occurs in mysql_register_view the view
+--echo # is still replicated to the slave
+--echo #
+connection master;
+create table t1 (a int);
+insert into t1 values (1);
+create view v1 as select a from t1;
+insert into v1 values (2);
+select * from v1 order by a;
+sync_slave_with_master;
+
+# view already have to be on slave
+show tables;
+connection master;
+set @@debug_dbug="d,simulate_register_view_failure";
+--error 1041
+CREATE VIEW v2 as SELECT * FROM t1;
+show tables;
+sync_slave_with_master;
+show tables;
+
+--source include/rpl_end.inc

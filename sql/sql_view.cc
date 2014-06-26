@@ -863,6 +863,14 @@ static int mysql_register_view(THD *thd, TABLE_LIST *view,
   view->definer.host= lex->definer->host;
   view->view_suid= lex->create_view_suid;
   view->with_check= lex->create_view_check;
+
+  DBUG_EXECUTE_IF("simulate_register_view_failure",
+                  my_error(ER_OUT_OF_RESOURCES, MYF(0)););
+  DBUG_EXECUTE_IF("simulate_register_view_failure",
+                  error= -1;);
+  DBUG_EXECUTE_IF("simulate_register_view_failure",
+                  goto err;);
+
   if ((view->updatable_view= (can_be_merged &&
                               view->algorithm != VIEW_ALGORITHM_TMPTABLE)))
   {
