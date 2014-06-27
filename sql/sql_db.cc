@@ -615,7 +615,7 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
         DBUG_RETURN(1);
 
       /* Removing old database. */
-      if (mysql_rm_db(thd, db, 0, 0))
+      if (mysql_rm_db(thd, db, 0, 1))
         DBUG_RETURN(1);
 
       /*
