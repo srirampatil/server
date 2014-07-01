@@ -5039,7 +5039,7 @@ create_sp_error:
     if (check_global_access(thd, SUPER_ACL))
       break;
 
-    if ((err_code= drop_server(thd, &lex->server_options)))
+    if ((err_code= drop_server(thd, &lex->server_options, 0)))
     {
       if (! lex->check_exists && err_code == ER_FOREIGN_SERVER_DOESNT_EXIST)
       {

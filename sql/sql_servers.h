@@ -41,7 +41,7 @@ void servers_free(bool end=0);
 int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options);
 
 /* drop functions */ 
-int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options);
+int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options, bool dont_lock);
 
 /* update functions */
 int alter_server(THD *thd, LEX_SERVER_OPTIONS *server_options);

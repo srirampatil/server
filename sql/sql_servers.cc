@@ -597,7 +597,7 @@ int insert_server_record(TABLE *table, FOREIGN_SERVER *server)
     > 0 - error code
 */
 
-int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
+int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options, bool dont_lock)
 {
   int error;
   TABLE_LIST tables;
@@ -611,7 +611,8 @@ int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
 
   tables.init_one_table("mysql", 5, "servers", 7, "servers", TL_WRITE);
 
-  mysql_rwlock_wrlock(&THR_LOCK_servers);
+  if(!dont_lock)
+    mysql_rwlock_wrlock(&THR_LOCK_servers);
 
   /* hit the memory hit first */
   if ((error= delete_server_record_in_cache(server_options)))
@@ -635,7 +636,8 @@ int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   }
 
 end:
-  mysql_rwlock_unlock(&THR_LOCK_servers);
+  if(!dont_lock)
+    mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(error);
 }
 
@@ -997,15 +999,22 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   if (my_hash_search(&servers_cache, (uchar*) server_options->server_name,
                      server_options->server_name_length))
   {
-    if (create_options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    if (create_options & HA_LEX_CREATE_REPLACE)
+    {
+      if(error = drop_server(thd, server_options, 1))
+        goto end;
+    }
+    else if (create_options & HA_LEX_CREATE_IF_NOT_EXISTS)
     {
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_FOREIGN_SERVER_EXISTS,
                           ER(ER_FOREIGN_SERVER_EXISTS),
                           server_options->server_name);
       error= 0;
+      goto end;
     }
-    goto end;
+    else
+      goto end;
   }
 
   if (!(server= prepare_server_struct_for_insert(server_options)))

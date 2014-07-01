@@ -2478,10 +2478,13 @@ create:
           {
             Lex->alter_tablespace_info->ts_cmd_type= CREATE_TABLESPACE;
           }
-        | CREATE server_def
+        | create_or_replace
           {
+            Lex->create_info.options = $1;
             Lex->sql_command= SQLCOM_CREATE_SERVER;
           }
+          server_def
+          {}
         ;
 
 server_def:
@@ -2491,10 +2494,16 @@ server_def:
           ident_or_text
           OPTIONS_SYM '(' server_options_list ')'
           {
+            if($2 && Lex->create_info.options == HA_LEX_CREATE_REPLACE)
+            {
+              my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+              MYSQL_YYABORT;
+            }
+
+            Lex->create_info.options |= $2;
             Lex->server_options.server_name= $3.str;
             Lex->server_options.server_name_length= $3.length;
             Lex->server_options.scheme= $7.str;
-            Lex->create_info.options = $2;
           }
         ;
 
