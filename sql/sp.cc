@@ -1025,10 +1025,10 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
                               (type == TYPE_ENUM_FUNCTION) ? "FUNCTION" : "PROCEDURE",
                               thd->lex->spname->m_name.str);
         ret= SP_OK;
+        goto log;
       }
-      else
-        ret= SP_WRITE_ROW_FAILED;
 
+      ret= SP_WRITE_ROW_FAILED;
       goto done;
     }
 
@@ -1197,7 +1197,8 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
       sp_cache_invalidate();
   }
 
-done:
+log:
+
   if (ret == SP_OK && mysql_bin_log.is_open())
   {
     thd->clear_error();
@@ -1231,6 +1232,7 @@ done:
     thd->variables.sql_mode= 0;
   }
 
+done:
   thd->count_cuted_fields= saved_count_cuted_fields;
   thd->variables.sql_mode= saved_mode;
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());

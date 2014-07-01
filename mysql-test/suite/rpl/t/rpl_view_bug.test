@@ -22,8 +22,10 @@ sync_slave_with_master;
 show tables;
 connection master;
 set @@debug_dbug="d,simulate_register_view_failure";
---error 1041
+
+--error ER_OUT_OF_RESOURCES
 CREATE VIEW v2 as SELECT * FROM t1;
+
 show tables;
 sync_slave_with_master;
 show tables;
