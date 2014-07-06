@@ -606,14 +606,6 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
       if (check_access(thd, DROP_ACL, db, NULL, NULL, 1, 0))
         DBUG_RETURN(1);
 
-      /*
-        Checking if create permission is granted before deleting the existing
-        db. This makes sure that CREATE OR REPLACE happens completely or
-        nothing changes.
-      */
-      if(check_access(thd, CREATE_ACL, db, NULL, NULL, 1, 0))
-        DBUG_RETURN(1);
-
       /* Removing old database. */
       if (mysql_rm_db(thd, db, 0, 1))
         DBUG_RETURN(1);
