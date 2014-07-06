@@ -2450,13 +2450,15 @@ create:
                                     VIEW_CREATE_OR_REPLACE);
             Lex->create_view_algorithm= DTYPE_ALGORITHM_UNDEFINED;
             Lex->create_view_suid= TRUE;
+            Lex->create_info.options = $1;
           }
           view_or_trigger_or_sp_or_event
           {
-            if ($1 && Lex->sql_command != SQLCOM_CREATE_VIEW)
+            if ($1 && (Lex->sql_command != SQLCOM_CREATE_VIEW &&
+                Lex->sql_command != SQLCOM_CREATE_TRIGGER))
             {
                my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE",
-                       "TRIGGERS / SP / EVENT");
+                       "SP / EVENT");
                MYSQL_YYABORT;
             }
           }
@@ -16054,6 +16056,14 @@ trigger_tail:
           remember_name /* $8 */
           { /* $9 */
             Lex->raw_trg_on_table_name_begin= YYLIP->get_tok_start();
+
+            if (Lex->create_info.options & HA_LEX_CREATE_REPLACE && $3)
+            {
+               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+               MYSQL_YYABORT;
+            }
+
+            Lex->create_info.options |= $3;
           }
           table_ident /* $10 */
           FOR_SYM
@@ -16097,7 +16107,6 @@ trigger_tail:
             sp_head *sp= lex->sphead;
 
             lex->sql_command= SQLCOM_CREATE_TRIGGER;
-            lex->create_info.options = $3;
             sp->set_stmt_end(thd);
             sp->restore_thd_mem_root(thd);
 

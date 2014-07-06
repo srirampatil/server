@@ -649,6 +649,8 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   LEX_STRING *trg_client_cs_name;
   LEX_STRING *trg_connection_cl_name;
   LEX_STRING *trg_db_cl_name;
+  sp_head *trg_head= bodies[lex->trg_chistics.event]
+                           [lex->trg_chistics.action_time];
 
   if (check_for_broken_triggers())
     return true;
@@ -661,8 +663,14 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
     return 1;
   }
 
-  /* We don't allow creation of several triggers of the same type yet */
-  if (bodies[lex->trg_chistics.event][lex->trg_chistics.action_time] != 0)
+  /*
+    We don't allow creation of several triggers of the same type yet.
+
+    Note: Comparing the trigger names here to avoid throwing the error without
+    considering the possibility of CREATE OR REPLACE and IF NOT EXISTS clauses in
+    the query.
+  */
+  if(trg_head != 0 && strcmp(trg_head->m_name.str, lex->spname->m_name.str) != 0)
   {
     my_error(ER_NOT_SUPPORTED_YET, MYF(0),
              "multiple triggers with the same action time"
@@ -721,16 +729,26 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   /* Use the filesystem to enforce trigger namespace constraints. */
   if (!access(trigname_buff, F_OK))
   {
-    if (lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    if (lex->create_info.options & HA_LEX_CREATE_REPLACE)
+    {
+      String drop_trg_query;
+      drop_trg_query.append("DROP TRIGGER ");
+      drop_trg_query.append(lex->spname->m_name.str);
+      if(drop_trigger(thd, tables, &drop_trg_query))
+        return 1;
+    }
+    else if (lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
     {
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_TRG_ALREADY_EXISTS, ER(ER_TRG_ALREADY_EXISTS),
                           trigname_buff);
       return 0;
     }
-
-    my_error(ER_TRG_ALREADY_EXISTS, MYF(0));
-    return 1;
+    else
+    {
+      my_error(ER_TRG_ALREADY_EXISTS, MYF(0));
+      return 1;
+    }
   }
 
   trigname.trigger_table.str= tables->table_name;
