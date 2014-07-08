@@ -580,6 +580,9 @@ int insert_server_record(TABLE *table, FOREIGN_SERVER *server)
     drop_server()
       THD *thd
       LEX_SERVER_OPTIONS *server_options
+      bool drop_for_replace
+              true if invoked for CREATE OR REPLACE from create_server.
+              false otherwise.
 
   NOTES
     This function takes as its arguments a THD object pointer and a pointer
@@ -597,12 +600,12 @@ int insert_server_record(TABLE *table, FOREIGN_SERVER *server)
     > 0 - error code
 */
 
-int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options, bool dont_lock)
+int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options, bool drop_for_replace)
 {
   int error;
   TABLE_LIST tables;
   TABLE *table;
-  LEX_STRING name= { server_options->server_name, 
+  LEX_STRING name= { server_options->server_name,
                      server_options->server_name_length };
 
   DBUG_ENTER("drop_server");
@@ -611,7 +614,7 @@ int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options, bool dont_lock)
 
   tables.init_one_table("mysql", 5, "servers", 7, "servers", TL_WRITE);
 
-  if(!dont_lock)
+  if(!drop_for_replace)
     mysql_rwlock_wrlock(&THR_LOCK_servers);
 
   /* hit the memory hit first */
@@ -636,7 +639,7 @@ int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options, bool dont_lock)
   }
 
 end:
-  if(!dont_lock)
+  if(!drop_for_replace)
     mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(error);
 }
@@ -1001,7 +1004,7 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   {
     if (create_options & HA_LEX_CREATE_REPLACE)
     {
-      if(error = drop_server(thd, server_options, 1))
+      if ((error = drop_server(thd, server_options, 1)))
         goto end;
     }
     else if (create_options & HA_LEX_CREATE_IF_NOT_EXISTS)

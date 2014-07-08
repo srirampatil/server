@@ -4794,7 +4794,7 @@ create_sp_error:
         goto error;
 
       /* Conditionally writes to binlog */
-      sp_result= sp_drop_routine(thd, type, lex->spname);
+      sp_result= sp_drop_routine(thd, type, lex->spname, 0);
 
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
       /*

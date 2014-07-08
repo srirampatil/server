@@ -134,7 +134,7 @@ sp_update_routine(THD *thd, stored_procedure_type type, sp_name *name,
                   st_sp_chistics *chistics);
 
 int
-sp_drop_routine(THD *thd, stored_procedure_type type, sp_name *name);
+sp_drop_routine(THD *thd, stored_procedure_type type, sp_name *name, bool is_replace);
 
 
 /**

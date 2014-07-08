@@ -978,6 +978,7 @@ sp_returns_type(THD *thd, String &result, sp_head *sp)
 int
 sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
 {
+  LEX *lex = thd->lex;
   int ret;
   TABLE *table;
   char definer_buf[USER_HOST_BUFF_SIZE];
@@ -1016,20 +1017,35 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
   else
   {
     /* Checking if the routine already exists */
-    if(db_find_routine_aux(thd, type, thd->lex->spname, table) == SP_OK)
+    if (db_find_routine_aux(thd, type, lex->spname, table) == SP_OK)
     {
-      if (thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+      if (lex->create_info.options & HA_LEX_CREATE_REPLACE)
+      {
+        if (check_routine_access(thd, ALTER_PROC_ACL, lex->spname->m_db.str,
+                                 lex->spname->m_name.str,
+                                 lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
+        {
+          ret = 1;
+          goto done;
+        }
+
+        if((ret = sp_drop_routine(thd, type, lex->spname, 1)))
+          goto done;
+      }
+      else if (lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
       {
         push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                               ER_SP_ALREADY_EXISTS, ER(ER_SP_ALREADY_EXISTS),
                               (type == TYPE_ENUM_FUNCTION) ? "FUNCTION" : "PROCEDURE",
-                              thd->lex->spname->m_name.str);
+                              lex->spname->m_name.str);
         ret= SP_OK;
         goto log;
       }
-
-      ret= SP_WRITE_ROW_FAILED;
-      goto done;
+      else
+      {
+        ret= SP_WRITE_ROW_FAILED;
+        goto done;
+      }
     }
 
     restore_record(table, s->default_values); // Get default values for fields
@@ -1250,13 +1266,17 @@ done:
   @param type Stored routine type
               (TYPE_ENUM_PROCEDURE or TYPE_ENUM_FUNCTION)
   @param name Stored routine name.
+  @param drop_for_replace
+              true if invoked for CREATE OR REPLACE query from
+              sp_create_routine. false otherwise.
 
   @return Error code. SP_OK is returned on success. Other SP_ constants are
   used to indicate about errors.
 */
 
 int
-sp_drop_routine(THD *thd, stored_procedure_type type, sp_name *name)
+sp_drop_routine(THD *thd, stored_procedure_type type, sp_name *name,
+                bool drop_for_replace)
 {
   TABLE *table;
   int ret;
@@ -1269,12 +1289,15 @@ sp_drop_routine(THD *thd, stored_procedure_type type, sp_name *name)
   DBUG_ASSERT(type == TYPE_ENUM_PROCEDURE ||
               type == TYPE_ENUM_FUNCTION);
 
-  /* Grab an exclusive MDL lock. */
-  if (lock_object_name(thd, mdl_type, name->m_db.str, name->m_name.str))
-    DBUG_RETURN(SP_DELETE_ROW_FAILED);
+  if (!drop_for_replace)
+  {
+    /* Grab an exclusive MDL lock. */
+    if (lock_object_name(thd, mdl_type, name->m_db.str, name->m_name.str))
+      DBUG_RETURN(SP_DELETE_ROW_FAILED);
 
-  if (!(table= open_proc_table_for_update(thd)))
-    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+    if (!(table= open_proc_table_for_update(thd)))
+      DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+  }
 
   /*
     This statement will be replicated as a statement, even when using
@@ -1291,7 +1314,8 @@ sp_drop_routine(THD *thd, stored_procedure_type type, sp_name *name)
 
   if (ret == SP_OK)
   {
-    if (write_bin_log(thd, TRUE, thd->query(), thd->query_length()))
+    // If it is CREATE_OR REPLACE then query should not be logged
+    if (!drop_for_replace && write_bin_log(thd, TRUE, thd->query(), thd->query_length()))
       ret= SP_INTERNAL_ERROR;
     sp_cache_invalidate();
 

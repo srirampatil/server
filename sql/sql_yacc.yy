@@ -2454,8 +2454,9 @@ create:
           }
           view_or_trigger_or_sp_or_event
           {
-            if ($1 && (Lex->sql_command != SQLCOM_CREATE_VIEW &&
-                Lex->sql_command != SQLCOM_CREATE_TRIGGER))
+            if ($1 && (Lex->sql_command != SQLCOM_CREATE_VIEW
+                && Lex->sql_command != SQLCOM_CREATE_TRIGGER
+                && Lex->sql_command != SQLCOM_CREATE_PROCEDURE))
             {
                my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE",
                        "SP / EVENT");
@@ -16320,7 +16321,12 @@ sp_tail:
               MYSQL_YYABORT;
             }
 
-            lex->create_info.options= $2;
+            if($2 && lex->create_info.options & HA_LEX_CREATE_REPLACE) {
+              my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+              MYSQL_YYABORT;
+            }
+
+            lex->create_info.options |= $2;
             lex->stmt_definition_begin= $3;
 
             /* Order is important here: new - reset - init */
