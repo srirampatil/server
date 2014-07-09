@@ -1038,6 +1038,7 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
                               ER_SP_ALREADY_EXISTS, ER(ER_SP_ALREADY_EXISTS),
                               (type == TYPE_ENUM_FUNCTION) ? "FUNCTION" : "PROCEDURE",
                               lex->spname->m_name.str);
+
         ret= SP_OK;
         goto log;
       }
@@ -1110,15 +1111,6 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
     store_failed= store_failed ||
       table->field[MYSQL_PROC_FIELD_PARAM_LIST]->
         store(sp->m_params.str, sp->m_params.length, system_charset_info);
-
-    if (sp->m_type == TYPE_ENUM_FUNCTION)
-    {
-      sp_returns_type(thd, retstr, sp);
-
-      store_failed= store_failed ||
-        table->field[MYSQL_PROC_FIELD_RETURNS]->
-          store(retstr.ptr(), retstr.length(), system_charset_info);
-    }
 
     store_failed= store_failed ||
       table->field[MYSQL_PROC_FIELD_BODY]->
@@ -1214,6 +1206,15 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
   }
 
 log:
+
+  if (sp->m_type == TYPE_ENUM_FUNCTION)
+    {
+      sp_returns_type(thd, retstr, sp);
+
+      store_failed= store_failed ||
+        table->field[MYSQL_PROC_FIELD_RETURNS]->
+          store(retstr.ptr(), retstr.length(), system_charset_info);
+    }
 
   if (ret == SP_OK && mysql_bin_log.is_open())
   {
@@ -2191,7 +2192,12 @@ create_string(THD *thd, String *buf,
     return FALSE;
 
   thd->variables.sql_mode= sql_mode;
-  buf->append(STRING_WITH_LEN("CREATE "));
+
+  if(thd->lex->create_info.options & HA_LEX_CREATE_REPLACE)
+    buf->append(STRING_WITH_LEN("CREATE OR REPLACE "));
+  else
+    buf->append(STRING_WITH_LEN("CREATE "));
+
   append_definer(thd, buf, definer_user, definer_host);
   if (type == TYPE_ENUM_FUNCTION)
     buf->append(STRING_WITH_LEN("FUNCTION "));

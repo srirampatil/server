@@ -2456,10 +2456,11 @@ create:
           {
             if ($1 && (Lex->sql_command != SQLCOM_CREATE_VIEW
                 && Lex->sql_command != SQLCOM_CREATE_TRIGGER
-                && Lex->sql_command != SQLCOM_CREATE_PROCEDURE))
+                && Lex->sql_command != SQLCOM_CREATE_PROCEDURE
+                && Lex->sql_command != SQLCOM_CREATE_SPFUNCTION))
             {
                my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE",
-                       "SP / EVENT");
+                       "EVENT");
                MYSQL_YYABORT;
             }
           }
@@ -16181,6 +16182,14 @@ sf_tail:
           '(' /* $5 */
           { /* $6 */
             LEX *lex= thd->lex;
+
+            if($3 && lex->create_info.options & HA_LEX_CREATE_REPLACE) {
+              my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+              MYSQL_YYABORT;
+            }
+
+            lex->create_info.options |= $3;
+
             Lex_input_stream *lip= YYLIP;
             sp_head *sp;
             const char* tmp_param_begin;
@@ -16262,7 +16271,6 @@ sf_tail:
               MYSQL_YYABORT;
 
             lex->sql_command= SQLCOM_CREATE_SPFUNCTION;
-            lex->create_info.options= $3;
 
             sp->set_stmt_end(thd);
             if (!(sp->m_flags & sp_head::HAS_RETURN))
