@@ -271,7 +271,12 @@ static int
 create_query_string(THD *thd, String *buf)
 {
   /* Append the "CREATE" part of the query */
-  if (buf->append(STRING_WITH_LEN("CREATE ")))
+  if (thd->lex->is_create_or_replace())
+  {
+    if (buf->append(STRING_WITH_LEN("CREATE OR REPLACE ")))
+      return 1;
+  }
+  else if (buf->append(STRING_WITH_LEN("CREATE ")))
     return 1;
   /* Append definer */
   append_definer(thd, buf, &(thd->lex->definer->user), &(thd->lex->definer->host));
@@ -280,7 +285,7 @@ create_query_string(THD *thd, String *buf)
                   thd->lex->stmt_definition_end -
                   thd->lex->stmt_definition_begin))
     return 1;
- 
+
   return 0;
 }
 

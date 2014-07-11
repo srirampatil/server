@@ -2736,6 +2736,14 @@ struct LEX: public Query_tables_list
 
   int print_explain(select_result_sink *output, uint8 explain_flags,
                     bool *printed_anything);
+
+  inline bool is_create_or_replace() {
+    return (create_info.options & HA_LEX_CREATE_REPLACE);
+  }
+
+  inline bool is_create_if_not_exists() {
+    return (create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS);
+  }
 };
 
 

@@ -2454,13 +2454,10 @@ create:
           }
           view_or_trigger_or_sp_or_event
           {
-            if ($1 && (Lex->sql_command != SQLCOM_CREATE_VIEW
-                && Lex->sql_command != SQLCOM_CREATE_TRIGGER
-                && Lex->sql_command != SQLCOM_CREATE_PROCEDURE
-                && Lex->sql_command != SQLCOM_CREATE_SPFUNCTION))
+            if ($1 && (Lex->sql_command == SQLCOM_CREATE_FUNCTION))
             {
                my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE",
-                       "EVENT");
+                       "FUNCTION(UDF)");
                MYSQL_YYABORT;
             }
           }
@@ -2552,8 +2549,13 @@ event_tail:
           {
             LEX *lex=Lex;
 
+            if($3 && lex->is_create_or_replace()) {
+              my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+              MYSQL_YYABORT;
+            }
+            lex->create_info.options |= $3;
+
             lex->stmt_definition_begin= $1;
-            lex->create_info.options= $3;
             if (!(lex->event_parse_data= Event_parse_data::new_instance(thd)))
               MYSQL_YYABORT;
             lex->event_parse_data->identifier= $4;
@@ -16059,7 +16061,7 @@ trigger_tail:
           { /* $9 */
             Lex->raw_trg_on_table_name_begin= YYLIP->get_tok_start();
 
-            if (Lex->create_info.options & HA_LEX_CREATE_REPLACE && $3)
+            if (Lex->is_create_or_replace() && $3)
             {
                my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
                MYSQL_YYABORT;
@@ -16183,7 +16185,7 @@ sf_tail:
           { /* $6 */
             LEX *lex= thd->lex;
 
-            if($3 && lex->create_info.options & HA_LEX_CREATE_REPLACE) {
+            if($3 && lex->is_create_or_replace()) {
               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
               MYSQL_YYABORT;
             }
@@ -16329,7 +16331,7 @@ sp_tail:
               MYSQL_YYABORT;
             }
 
-            if($2 && lex->create_info.options & HA_LEX_CREATE_REPLACE) {
+            if($2 && lex->is_create_or_replace()) {
               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
               MYSQL_YYABORT;
             }

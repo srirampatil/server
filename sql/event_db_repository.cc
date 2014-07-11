@@ -684,18 +684,27 @@ Event_db_repository::create_event(THD *thd, Event_parse_data *parse_data,
   DBUG_PRINT("info", ("check existance of an event with the same name"));
   if (!find_named_event(parse_data->dbname, parse_data->name, table))
   {
-    if (create_if_not)
+    if (thd->lex->is_create_or_replace())
+    {
+      if ((ret= table->file->ha_delete_row(table->record[0]))) {
+        table->file->print_error(ret, MYF(0));
+        goto end;
+      }
+    }
+    else if (create_if_not)
     {
       *event_already_exists= true;
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_EVENT_ALREADY_EXISTS, ER(ER_EVENT_ALREADY_EXISTS),
                           parse_data->name.str);
       ret= 0;
+      goto end;
     }
     else
+    {
       my_error(ER_EVENT_ALREADY_EXISTS, MYF(0), parse_data->name.str);
-
-    goto end;
+      goto end;
+    }
   } else
     *event_already_exists= false;
 
@@ -919,6 +928,7 @@ Event_db_repository::drop_event(THD *thd, LEX_STRING db, LEX_STRING name,
 
 end:
   close_thread_tables(thd);
+
   thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
   DBUG_RETURN(MY_TEST(ret));
