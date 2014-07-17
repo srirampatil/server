@@ -4753,7 +4753,7 @@ create_sp_error:
           if (check_access(thd, DELETE_ACL, "mysql", NULL, NULL, 1, 0))
             goto error;
 
-          if (!(res = mysql_drop_function(thd, &lex->spname->m_name)))
+          if (!(res = mysql_drop_function(thd, &lex->spname->m_name, 0, NULL)))
           {
             my_ok(thd);
             break;

@@ -2453,14 +2453,7 @@ create:
             Lex->create_info.options = $1;
           }
           view_or_trigger_or_sp_or_event
-          {
-            if ($1 && (Lex->sql_command == SQLCOM_CREATE_FUNCTION))
-            {
-               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE",
-                       "FUNCTION(UDF)");
-               MYSQL_YYABORT;
-            }
-          }
+          {}
         | CREATE USER opt_if_not_exists clear_privileges grant_list
           {
             Lex->sql_command = SQLCOM_CREATE_USER;
@@ -16148,8 +16141,14 @@ udf_tail:
                        $5.str);
               MYSQL_YYABORT;
             }
+
+            if($4 && lex->is_create_or_replace()) {
+              my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+              MYSQL_YYABORT;
+            }
+
+            lex->create_info.options |= $4;
             lex->sql_command = SQLCOM_CREATE_FUNCTION;
-            lex->create_info.options= $4;
             lex->udf.type= UDFTYPE_AGGREGATE;
             lex->stmt_definition_begin= $2;
             lex->udf.name = $5;
@@ -16166,8 +16165,15 @@ udf_tail:
                        $4.str);
               MYSQL_YYABORT;
             }
+
+            if($3 && lex->is_create_or_replace()) {
+              my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+              MYSQL_YYABORT;
+            }
+
+            lex->create_info.options |= $3;
+
             lex->sql_command = SQLCOM_CREATE_FUNCTION;
-            lex->create_info.options= $3;
             lex->udf.type= UDFTYPE_FUNCTION;
             lex->stmt_definition_begin= $1;
             lex->udf.name = $4;
