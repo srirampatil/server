@@ -2454,15 +2454,27 @@ create:
           }
           view_or_trigger_or_sp_or_event
           {}
-        | CREATE USER opt_if_not_exists clear_privileges grant_list
+        | create_or_replace USER opt_if_not_exists clear_privileges grant_list
           {
+            if ($1 && $3)
+            {
+               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+               MYSQL_YYABORT;
+            }
+
             Lex->sql_command = SQLCOM_CREATE_USER;
-            Lex->create_info.options = $3;
+            Lex->create_info.options= ($1 | $3);
           }
-        | CREATE ROLE_SYM opt_if_not_exists clear_privileges role_list opt_with_admin
+        | create_or_replace ROLE_SYM opt_if_not_exists clear_privileges role_list opt_with_admin
           {
+            if ($1 && $3)
+            {
+               my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+               MYSQL_YYABORT;
+            }
+
             Lex->sql_command = SQLCOM_CREATE_ROLE;
-            Lex->create_info.options= $3;
+            Lex->create_info.options= ($1 | $3);
           }
         | CREATE LOGFILE_SYM GROUP_SYM logfile_group_info 
           {
