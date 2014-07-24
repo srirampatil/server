@@ -413,6 +413,40 @@ static udf_func *add_udf(LEX_STRING *name, Item_result ret, char *dl,
 }
 
 
+int mysql_drop_function_internal(THD *thd, udf_func *udf, TABLE *table)
+{
+  DBUG_ENTER("mysql_drop_function_internal");
+
+  char *exact_name_str= udf->name.str;
+  uint exact_name_len= udf->name.length;
+
+  del_udf(udf);
+  /*
+    Close the handle if this was function that was found during boot or
+    CREATE FUNCTION and it's not in use by any other udf function
+  */
+  if (udf->dlhandle && !find_udf_dl(udf->dl))
+    dlclose(udf->dlhandle);
+
+  if (!table)
+    DBUG_RETURN(1);
+
+  table->use_all_columns();
+  table->field[0]->store(exact_name_str, exact_name_len, &my_charset_bin);
+  if (!table->file->ha_index_read_idx_map(table->record[0], 0,
+                                          (uchar*) table->field[0]->ptr,
+                                          HA_WHOLE_KEY,
+                                          HA_READ_KEY_EXACT))
+  {
+    int error;
+    if ((error = table->file->ha_delete_row(table->record[0])))
+      table->file->print_error(error, MYF(0));
+  }
+
+  DBUG_RETURN(0);
+}
+
+
 /**
   Create a user defined function. 
 
@@ -465,15 +499,11 @@ int mysql_create_function(THD *thd,udf_func *udf)
 
   mysql_rwlock_wrlock(&THR_LOCK_udf);
   DEBUG_SYNC(current_thd, "mysql_create_function_after_lock");
-  if ((my_hash_search(&udf_hash,(uchar*) udf->name.str, udf->name.length)))
+  if ((u_d= (udf_func*) my_hash_search(&udf_hash,(uchar*) udf->name.str, udf->name.length)))
   {
-    if(thd->lex->is_create_or_replace())
+    if (thd->lex->is_create_or_replace())
     {
-      if ( (error = check_access(thd, DELETE_ACL, "mysql", NULL, NULL, 1, 0)) )
-        goto err;
-
-      LEX_STRING udf_name = udf->name;
-      if( (error = mysql_drop_function(thd, &udf_name, 1, table)) )
+      if((error= mysql_drop_function_internal(thd, u_d, table)))
         goto err;
     }
     else if (thd->lex->is_create_if_not_exists())
@@ -483,7 +513,8 @@ int mysql_create_function(THD *thd,udf_func *udf)
 
       goto done;
     }
-    else {
+    else
+    {
       my_error(ER_UDF_EXISTS, MYF(0), udf->name.str);
       goto err;
     }
@@ -513,16 +544,16 @@ int mysql_create_function(THD *thd,udf_func *udf)
       goto err;
     }
   }
-  udf->name.str=strdup_root(&mem,udf->name.str);
-  udf->dl=strdup_root(&mem,udf->dl);
+  udf->name.str= strdup_root(&mem,udf->name.str);
+  udf->dl= strdup_root(&mem,udf->dl);
   if (!(u_d=add_udf(&udf->name,udf->returns,udf->dl,udf->type)))
     goto err;
-  u_d->dlhandle = dl;
-  u_d->func=udf->func;
-  u_d->func_init=udf->func_init;
-  u_d->func_deinit=udf->func_deinit;
-  u_d->func_clear=udf->func_clear;
-  u_d->func_add=udf->func_add;
+  u_d->dlhandle= dl;
+  u_d->func= udf->func;
+  u_d->func_init= udf->func_init;
+  u_d->func_deinit= udf->func_deinit;
+  u_d->func_clear= udf->func_clear;
+  u_d->func_add= udf->func_add;
 
   /* create entry in mysql.func table */
 
@@ -562,17 +593,14 @@ err:
 }
 
 
-int mysql_drop_function(THD *thd,const LEX_STRING *udf_name,
-                        bool drop_for_replace, TABLE *locked_table)
+int mysql_drop_function(THD *thd,const LEX_STRING *udf_name)
 {
   TABLE *table;
   TABLE_LIST tables;
   udf_func *udf;
-  char *exact_name_str;
-  uint exact_name_len;
   DBUG_ENTER("mysql_drop_function");
 
-  if (!drop_for_replace && !initialized)
+  if (!initialized)
   {
     if (opt_noacl)
       my_error(ER_FUNCTION_NOT_DEFINED, MYF(0), udf_name->str);
@@ -581,20 +609,13 @@ int mysql_drop_function(THD *thd,const LEX_STRING *udf_name,
     DBUG_RETURN(1);
   }
 
-  if (drop_for_replace) {
-    udf=(udf_func*) my_hash_search(&udf_hash,(uchar*) udf_name->str,
-                                       (uint) udf_name->length);
-    table = locked_table;
-    goto del;
-  }
-
   tables.init_one_table(STRING_WITH_LEN("mysql"), STRING_WITH_LEN("func"),
                         "func", TL_WRITE);
   table= open_ltable(thd, &tables, TL_WRITE, MYSQL_LOCK_IGNORE_TIMEOUT);
 
   mysql_rwlock_wrlock(&THR_LOCK_udf);
   DEBUG_SYNC(current_thd, "mysql_drop_function_after_lock");
-  if ( !(udf=(udf_func*) my_hash_search(&udf_hash,(uchar*) udf_name->str,
+  if ( !(udf= (udf_func*) my_hash_search(&udf_hash,(uchar*) udf_name->str,
                                        (uint) udf_name->length)) )
   {
     if (thd->lex->check_exists)
@@ -609,49 +630,23 @@ int mysql_drop_function(THD *thd,const LEX_STRING *udf_name,
     goto err;
   }
 
-del:
-  exact_name_str= udf->name.str;
-  exact_name_len= udf->name.length;
-  del_udf(udf);
-  /*
-    Close the handle if this was function that was found during boot or
-    CREATE FUNCTION and it's not in use by any other udf function
-  */
-  if (udf->dlhandle && !find_udf_dl(udf->dl))
-    dlclose(udf->dlhandle);
-
-  if (!table)
+  if (mysql_drop_function_internal(thd, udf, table))
     goto err;
-  table->use_all_columns();
-  table->field[0]->store(exact_name_str, exact_name_len, &my_charset_bin);
-  if (!table->file->ha_index_read_idx_map(table->record[0], 0,
-                                          (uchar*) table->field[0]->ptr,
-                                          HA_WHOLE_KEY,
-                                          HA_READ_KEY_EXACT))
-  {
-    int error;
-    if ((error = table->file->ha_delete_row(table->record[0])))
-      table->file->print_error(error, MYF(0));
-  }
 
 done:
-  if (!drop_for_replace)
-  {
-    mysql_rwlock_unlock(&THR_LOCK_udf);
+  mysql_rwlock_unlock(&THR_LOCK_udf);
 
-    /*
-      Binlog the drop function. Keep the table open and locked
-      while binlogging, to avoid binlog inconsistency.
-    */
-    if (write_bin_log(thd, TRUE, thd->query(), thd->query_length()))
-      DBUG_RETURN(1);
-  }
+  /*
+    Binlog the drop function. Keep the table open and locked
+    while binlogging, to avoid binlog inconsistency.
+  */
+  if (write_bin_log(thd, TRUE, thd->query(), thd->query_length()))
+    DBUG_RETURN(1);
 
   DBUG_RETURN(0);
 
 err:
-  if(!drop_for_replace)
-    mysql_rwlock_unlock(&THR_LOCK_udf);
+  mysql_rwlock_unlock(&THR_LOCK_udf);
   DBUG_RETURN(1);
 }
 
