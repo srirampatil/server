@@ -412,8 +412,19 @@ static udf_func *add_udf(LEX_STRING *name, Item_result ret, char *dl,
   return tmp;
 }
 
+/*
+  Drop user defined function.
 
-int mysql_drop_function_internal(THD *thd, udf_func *udf, TABLE *table)
+  @param thd    Thread handler.
+  @param udf    Existing udf_func pointer which is to be deleted.
+  @param table  mysql.func table reference (opened and locked)
+
+  Assumption
+
+  - udf is not null.
+  - table is already opened and locked
+*/
+static int mysql_drop_function_internal(THD *thd, udf_func *udf, TABLE *table)
 {
   DBUG_ENTER("mysql_drop_function_internal");
 
