@@ -7976,10 +7976,10 @@ bool create_table_precheck(THD *thd, TABLE_LIST *tables,
              (CREATE_ACL | (select_lex->item_list.elements ? INSERT_ACL : 0));
 
   /* CREATE OR REPLACE on not temporary tables require DROP_ACL */
-  if ((lex->create_info.options & HA_LEX_CREATE_REPLACE) &&
+  if ((lex->is_create_or_replace()) &&
       !lex->create_info.tmp_table())
     want_priv|= DROP_ACL;
-                          
+
   if (check_access(thd, want_priv, create_table->db,
                    &create_table->grant.privilege,
                    &create_table->grant.m_internal,

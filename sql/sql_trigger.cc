@@ -729,7 +729,7 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   /* Use the filesystem to enforce trigger namespace constraints. */
   if (!access(trigname_buff, F_OK))
   {
-    if (lex->create_info.options & HA_LEX_CREATE_REPLACE)
+    if (lex->is_create_or_replace())
     {
       String drop_trg_query;
       drop_trg_query.append("DROP TRIGGER ");
@@ -737,7 +737,7 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
       if(drop_trigger(thd, tables, &drop_trg_query))
         return 1;
     }
-    else if (lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    else if (lex->is_create_if_not_exists())
     {
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_TRG_ALREADY_EXISTS, ER(ER_TRG_ALREADY_EXISTS),

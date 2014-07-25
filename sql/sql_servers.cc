@@ -989,7 +989,6 @@ delete_server_record(TABLE *table,
 int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
 {
   int error= ER_FOREIGN_SERVER_EXISTS;
-  uint create_options = thd->lex->create_info.options;
   FOREIGN_SERVER *server;
 
   DBUG_ENTER("create_server");
@@ -1002,12 +1001,12 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   if (my_hash_search(&servers_cache, (uchar*) server_options->server_name,
                      server_options->server_name_length))
   {
-    if (create_options & HA_LEX_CREATE_REPLACE)
+    if (thd->lex->is_create_or_replace())
     {
       if ((error = drop_server(thd, server_options, 1)))
         goto end;
     }
-    else if (create_options & HA_LEX_CREATE_IF_NOT_EXISTS)
+    else if (thd->lex->is_create_if_not_exists())
     {
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_FOREIGN_SERVER_EXISTS,

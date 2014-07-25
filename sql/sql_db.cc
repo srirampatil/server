@@ -570,7 +570,6 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
   long result= 1;
   int error= 0;
   MY_STAT stat_info;
-  uint create_options= create_info ? create_info->options : 0;
   uint path_len;
   DBUG_ENTER("mysql_create_db");
 
@@ -600,7 +599,7 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
 
   if (mysql_file_stat(key_file_misc, path, &stat_info, MYF(0)))
   {
-    if (create_options & HA_LEX_CREATE_REPLACE)
+    if (thd->lex->is_create_or_replace())
     {
       /* Need to check access permissions before dropping database. */
       if (check_access(thd, DROP_ACL, db, NULL, NULL, 1, 0))
@@ -617,18 +616,18 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
       thd->get_stmt_da()->reset_diagnostics_area();
       goto mkdir;
     }
-    else if (!(create_options & HA_LEX_CREATE_IF_NOT_EXISTS))
-    {
-      my_error(ER_DB_CREATE_EXISTS, MYF(0), db);
-      error= -1;
-      goto exit;
-    }
-    else
+    else if (thd->lex->is_create_if_not_exists())
     {
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
 			ER_DB_CREATE_EXISTS, ER(ER_DB_CREATE_EXISTS), db);
       error= 0;
       goto not_silent;
+    }
+    else
+    {
+      my_error(ER_DB_CREATE_EXISTS, MYF(0), db);
+      error= -1;
+      goto exit;
     }
   }
 

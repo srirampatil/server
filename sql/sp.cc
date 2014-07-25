@@ -1019,7 +1019,7 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
     /* Checking if the routine already exists */
     if (db_find_routine_aux(thd, type, lex->spname, table) == SP_OK)
     {
-      if (lex->create_info.options & HA_LEX_CREATE_REPLACE)
+      if (lex->is_create_or_replace())
       {
         if (check_routine_access(thd, ALTER_PROC_ACL, lex->spname->m_db.str,
                                  lex->spname->m_name.str,
@@ -1032,7 +1032,7 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
         if((ret = sp_drop_routine(thd, type, lex->spname, 1)))
           goto done;
       }
-      else if (lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+      else if (lex->is_create_if_not_exists())
       {
         push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                               ER_SP_ALREADY_EXISTS, ER(ER_SP_ALREADY_EXISTS),
@@ -2193,7 +2193,7 @@ create_string(THD *thd, String *buf,
 
   thd->variables.sql_mode= sql_mode;
 
-  if(thd->lex->create_info.options & HA_LEX_CREATE_REPLACE)
+  if(thd->lex->is_create_or_replace())
     buf->append(STRING_WITH_LEN("CREATE OR REPLACE "));
   else
     buf->append(STRING_WITH_LEN("CREATE "));
@@ -2204,7 +2204,7 @@ create_string(THD *thd, String *buf,
   else
     buf->append(STRING_WITH_LEN("PROCEDURE "));
 
-  if(thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+  if(thd->lex->is_create_if_not_exists())
     buf->append(STRING_WITH_LEN("IF NOT EXISTS "));
 
   if (dblen > 0)
