@@ -621,6 +621,7 @@ int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create_info,
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
 			ER_DB_CREATE_EXISTS, ER(ER_DB_CREATE_EXISTS), db);
       error= 0;
+      result = 0;
       goto not_silent;
     }
     else
