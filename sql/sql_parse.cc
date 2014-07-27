@@ -3855,7 +3855,8 @@ end_with_restore_list:
       }
     }
 #endif
-    if (check_access(thd, CREATE_ACL, lex->name.str, NULL, NULL, 1, 0))
+    if (check_access(thd, (lex->is_create_or_replace()) ? CREATE_ACL | DROP_ACL
+                     : CREATE_ACL, lex->name.str, NULL, NULL, 1, 0))
       break;
     res= mysql_create_db(thd, lex->name.str, &create_info, 0);
     break;
@@ -3995,9 +3996,8 @@ end_with_restore_list:
     switch (lex->sql_command) {
     case SQLCOM_CREATE_EVENT:
     {
-      bool if_not_exists= (lex->create_info.options &
-                           HA_LEX_CREATE_IF_NOT_EXISTS);
-      res= Events::create_event(thd, lex->event_parse_data, if_not_exists);
+      res= Events::create_event(thd, lex->event_parse_data,
+                                lex->is_create_if_not_exists());
       break;
     }
     case SQLCOM_ALTER_EVENT:
@@ -4054,7 +4054,8 @@ end_with_restore_list:
   case SQLCOM_CREATE_USER:
   case SQLCOM_CREATE_ROLE:
   {
-    if (check_access(thd, INSERT_ACL, "mysql", NULL, NULL, 1, 1) &&
+    if (check_access(thd, (lex->is_create_or_replace()) ? INSERT_ACL | DELETE_ACL
+                     : INSERT_ACL, "mysql", NULL, NULL, 1, 1) &&
         check_global_access(thd,CREATE_USER_ACL))
       break;
     /* Conditionally writes to binlog */
@@ -4495,6 +4496,24 @@ end_with_restore_list:
     if (check_access(thd, CREATE_PROC_ACL, lex->sphead->m_db.str,
                      NULL, NULL, 0, 0))
       goto create_sp_error;
+
+    /* Checking the drop permissions if CREATE OR REPLACE is used */
+    if (lex->is_create_or_replace())
+    {
+      if (lex->sql_command == SQLCOM_DROP_FUNCTION &&
+          ! lex->spname->m_explicit_name)
+      {
+        if (check_access(thd, DELETE_ACL, "mysql", NULL, NULL, 1, 0))
+          goto create_sp_error;
+      }
+      else
+      {
+        if (check_routine_access(thd, ALTER_PROC_ACL, lex->spname->m_db.str,
+                               lex->spname->m_name.str,
+                               lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
+          goto create_sp_error;
+      }
+    }
 
     name= lex->sphead->name(&namelen);
 #ifdef HAVE_DLOPEN
