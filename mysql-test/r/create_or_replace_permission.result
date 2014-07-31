@@ -1,0 +1,32 @@
+#
+# Tests for checking permission denied on CREATE OR REPLACE if DROP
+# access is revoked
+#
+SELECT CURRENT_USER;
+CURRENT_USER
+root@localhost
+GRANT ALL PRIVILEGES ON *.* TO mysqltest_1@localhost;
+REVOKE DROP ON *.* FROM mysqltest_1@localhost;
+REVOKE ALTER ROUTINE ON *.* FROM mysqltest_1@localhost;
+FLUSH PRIVILEGES;
+SELECT CURRENT_USER;
+CURRENT_USER
+mysqltest_1@localhost
+# CREATE OR DROP DATABASE
+CREATE OR REPLACE DATABASE db1;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'db1'
+# CREATE OR REPLACE TABLE
+CREATE DATABASE db1;
+USE db1;
+CREATE OR REPLACE TABLE t1(id INT);
+ERROR 42000: DROP command denied to user 'mysqltest_1'@'localhost' for table 't1'
+# CREATE OR REPLACE PROCEDURE
+CREATE OR REPLACE PROCEDURE proc1 (OUT cnt INT) BEGIN SELECT COUNT(*) INTO cnt FROM t1; END$
+ERROR 42000: alter routine command denied to user 'mysqltest_1'@'localhost' for routine 'db1.proc1'
+# CREATE OR REPLACE FUNCTION (UDF)
+# Need to verify this
+# --error ER_PROCACCESS_DENIED_ERROR
+# CREATE OR REPLACE FUNCTION lookup RETURNS STRING SONAME "udf_example.so";
+# CREATE OR REPLACE FUNCTION (stored)
+CREATE OR REPLACE FUNCTION hello(str char(20)) RETURNS TEXT RETURN CONCAT('Hello, ', str, '!');
+ERROR 42000: alter routine command denied to user 'mysqltest_1'@'localhost' for routine 'db1.hello'

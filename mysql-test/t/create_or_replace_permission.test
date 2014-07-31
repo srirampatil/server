@@ -1,0 +1,39 @@
+--echo #
+--echo # Tests for checking permission denied on CREATE OR REPLACE if DROP
+--echo # access is revoked
+--echo #
+
+SELECT CURRENT_USER;
+GRANT ALL PRIVILEGES ON *.* TO mysqltest_1@localhost;
+REVOKE DROP ON *.* FROM mysqltest_1@localhost;
+REVOKE ALTER ROUTINE ON *.* FROM mysqltest_1@localhost;
+FLUSH PRIVILEGES;
+
+connect (user_a, localhost, mysqltest_1,,);
+connection user_a;
+SELECT CURRENT_USER;
+
+--echo # CREATE OR DROP DATABASE
+--error ER_DBACCESS_DENIED_ERROR
+CREATE OR REPLACE DATABASE db1;
+
+--echo # CREATE OR REPLACE TABLE
+CREATE DATABASE db1;
+USE db1;
+--error ER_TABLEACCESS_DENIED_ERROR
+CREATE OR REPLACE TABLE t1(id INT);
+
+--echo # CREATE OR REPLACE PROCEDURE
+DELIMITER $;
+--error ER_PROCACCESS_DENIED_ERROR
+CREATE OR REPLACE PROCEDURE proc1 (OUT cnt INT) BEGIN SELECT COUNT(*) INTO cnt FROM t1; END$
+DELIMITER ;$
+
+--echo # CREATE OR REPLACE FUNCTION (UDF)
+--echo # Need to verify this
+--echo # --error ER_PROCACCESS_DENIED_ERROR
+--echo # CREATE OR REPLACE FUNCTION lookup RETURNS STRING SONAME "udf_example.so";
+
+--echo # CREATE OR REPLACE FUNCTION (stored)
+--error ER_PROCACCESS_DENIED_ERROR
+CREATE OR REPLACE FUNCTION hello(str char(20)) RETURNS TEXT RETURN CONCAT('Hello, ', str, '!');
