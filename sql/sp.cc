@@ -1021,14 +1021,6 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
     {
       if (lex->is_create_or_replace())
       {
-        if (check_routine_access(thd, ALTER_PROC_ACL, lex->spname->m_db.str,
-                                 lex->spname->m_name.str,
-                                 lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
-        {
-          ret = 1;
-          goto done;
-        }
-
         if((ret = sp_drop_routine(thd, type, lex->spname, 1)))
           goto done;
       }
@@ -1040,6 +1032,11 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
                               lex->spname->m_name.str);
 
         ret= SP_OK;
+
+        // Setting retstr as it is used for logging.
+        if (sp->m_type == TYPE_ENUM_FUNCTION)
+          sp_returns_type(thd, retstr, sp);
+
         goto log;
       }
       else
@@ -1119,6 +1116,15 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
     store_failed= store_failed ||
       table->field[MYSQL_PROC_FIELD_DEFINER]->
         store(definer.str, definer.length, system_charset_info);
+
+    if (sp->m_type == TYPE_ENUM_FUNCTION)
+    {
+      sp_returns_type(thd, retstr, sp);
+
+      store_failed= store_failed ||
+        table->field[MYSQL_PROC_FIELD_RETURNS]->
+          store(retstr.ptr(), retstr.length(), system_charset_info);
+    }
 
     ((Field_timestamp *)table->field[MYSQL_PROC_FIELD_CREATED])->set_time();
     ((Field_timestamp *)table->field[MYSQL_PROC_FIELD_MODIFIED])->set_time();
@@ -1206,15 +1212,6 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
   }
 
 log:
-
-  if (sp->m_type == TYPE_ENUM_FUNCTION)
-    {
-      sp_returns_type(thd, retstr, sp);
-
-      store_failed= store_failed ||
-        table->field[MYSQL_PROC_FIELD_RETURNS]->
-          store(retstr.ptr(), retstr.length(), system_charset_info);
-    }
 
   if (ret == SP_OK && mysql_bin_log.is_open())
   {
