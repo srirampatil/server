@@ -1,0 +1,30 @@
+CREATE DATABASE db1;
+CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+SHOW DATABASES LIKE 'db1';
+Database (db1)
+db1
+SET GLOBAL event_scheduler=1;
+SHOW DATABASES LIKE 'db1';
+Database (db1)
+SET GLOBAL event_scheduler=off;
+DROP DATABASE db1;
+ERROR HY000: Can't drop database 'db1'; database doesn't exist
+CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+ERROR HY000: Event 'event_1' already exists
+CREATE EVENT IF NOT EXISTS event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+Warnings:
+Note	1537	Event 'event_1' already exists
+CREATE OR REPLACE EVENT IF NOT EXISTS event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+ERROR HY000: Incorrect usage of OR REPLACE and IF NOT EXISTS
+CREATE OR REPLACE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+CREATE DATABASE db1;
+SHOW DATABASES LIKE 'db1';
+Database (db1)
+db1
+SET GLOBAL event_scheduler=1;
+SHOW DATABASES LIKE 'db1';
+Database (db1)
+SET GLOBAL event_scheduler=off;
+DROP DATABASE db1;
+ERROR HY000: Can't drop database 'db1'; database doesn't exist
+DROP EVENT IF EXISTS event_1;

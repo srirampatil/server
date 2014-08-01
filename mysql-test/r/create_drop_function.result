@@ -1,0 +1,30 @@
+CREATE FUNCTION f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+SELECT f1('world');
+f1('world')
+Hello, world!
+CREATE FUNCTION f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+ERROR 42000: FUNCTION f1 already exists
+CREATE FUNCTION IF NOT EXISTS f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+Warnings:
+Note	1304	FUNCTION f1 already exists
+CREATE OR REPLACE FUNCTION IF NOT EXISTS f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+ERROR HY000: Incorrect usage of OR REPLACE and IF NOT EXISTS
+CREATE OR REPLACE FUNCTION f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+DROP FUNCTION f1;
+CREATE FUNCTION IF NOT EXISTS f1(str char(20))
+RETURNS TEXT
+RETURN CONCAT('Hello, ', str, '!');
+SELECT f1('world');
+f1('world')
+Hello, world!
+DROP FUNCTION IF EXISTS f1;

@@ -1,0 +1,10 @@
+CREATE SERVER server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+CREATE SERVER server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+ERROR HY000: The foreign server, server_1, you are trying to create already exists.
+CREATE SERVER IF NOT EXISTS server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+Warnings:
+Note	1476	The foreign server, server_1, you are trying to create already exists.
+CREATE OR REPLACE SERVER IF NOT EXISTS server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+ERROR HY000: Incorrect usage of OR REPLACE and IF NOT EXISTS
+CREATE OR REPLACE SERVER server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+DROP SERVER server_1;

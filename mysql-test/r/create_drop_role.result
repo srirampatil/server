@@ -1,0 +1,43 @@
+CREATE ROLE role_1;
+CREATE ROLE IF NOT EXISTS role_1;
+Warnings:
+Note	1967	Can't create 'role_1'; it already exists
+CREATE OR REPLACE ROLE role_1;
+CREATE OR REPLACE ROLE IF NOT EXISTS role_1;
+ERROR HY000: Incorrect usage of OR REPLACE and IF NOT EXISTS
+CREATE ROLE role_1;
+ERROR HY000: Operation CREATE ROLE failed for 'role_1'
+CREATE USER u1@localhost;
+REVOKE SHOW DATABASES ON *.* FROM 'u1'@'localhost';
+GRANT SHOW DATABASES ON *.* TO role_1;
+GRANT role_1 TO u1@localhost;
+SELECT CURRENT_USER;
+CURRENT_USER
+u1@localhost
+SHOW DATABASES;
+Database
+information_schema
+test
+SELECT CURRENT_ROLE;
+CURRENT_ROLE
+NULL
+SET ROLE role_1;
+SELECT CURRENT_ROLE;
+CURRENT_ROLE
+role_1
+SHOW DATABASES;
+Database
+information_schema
+mtr
+mysql
+performance_schema
+test
+SET ROLE NONE;
+# Clearing up
+DROP ROLE role_1;
+DROP ROLE IF EXISTS role_1;
+Warnings:
+Note	1968	Can't drop 'role_1'; it doesn't exist
+DROP ROLE role_1;
+ERROR HY000: Operation DROP ROLE failed for 'role_1'
+DROP USER u1@localhost;

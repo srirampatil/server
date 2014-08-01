@@ -1,0 +1,39 @@
+CREATE ROLE role_1;
+
+CREATE ROLE IF NOT EXISTS role_1;
+CREATE OR REPLACE ROLE role_1;
+
+--error ER_WRONG_USAGE
+CREATE OR REPLACE ROLE IF NOT EXISTS role_1;
+
+--error ER_CANNOT_USER
+CREATE ROLE role_1;
+
+CREATE USER u1@localhost;
+REVOKE SHOW DATABASES ON *.* FROM 'u1'@'localhost';
+GRANT SHOW DATABASES ON *.* TO role_1;
+GRANT role_1 TO u1@localhost;
+
+connect (user_a, localhost, u1,,);
+connection user_a;
+
+SELECT CURRENT_USER;
+
+SHOW DATABASES;
+SELECT CURRENT_ROLE;
+SET ROLE role_1;
+SELECT CURRENT_ROLE;
+SHOW DATABASES;
+SET ROLE NONE;
+
+connect (user_b, localhost, root,,);
+connection user_b;
+
+--echo # Clearing up
+DROP ROLE role_1;
+DROP ROLE IF EXISTS role_1;
+
+--error ER_CANNOT_USER
+DROP ROLE role_1;
+
+DROP USER u1@localhost;

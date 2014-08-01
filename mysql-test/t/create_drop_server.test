@@ -1,0 +1,13 @@
+CREATE SERVER server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+
+--error ER_FOREIGN_SERVER_EXISTS
+CREATE SERVER server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+
+CREATE SERVER IF NOT EXISTS server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+
+--error ER_WRONG_USAGE
+CREATE OR REPLACE SERVER IF NOT EXISTS server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+
+CREATE OR REPLACE SERVER server_1 FOREIGN DATA WRAPPER mysql OPTIONS (USER 'mysqltest_1', HOST 'localhost', DATABASE 'test');
+
+DROP SERVER server_1;
