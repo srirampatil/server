@@ -4500,19 +4500,10 @@ end_with_restore_list:
     /* Checking the drop permissions if CREATE OR REPLACE is used */
     if (lex->is_create_or_replace())
     {
-      if (lex->sql_command == SQLCOM_DROP_FUNCTION &&
-          ! lex->spname->m_explicit_name)
-      {
-        if (check_access(thd, DELETE_ACL, "mysql", NULL, NULL, 1, 0))
-          goto create_sp_error;
-      }
-      else
-      {
-        if (check_routine_access(thd, ALTER_PROC_ACL, lex->spname->m_db.str,
+      if (check_routine_access(thd, ALTER_PROC_ACL, lex->spname->m_db.str,
                                lex->spname->m_name.str,
                                lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
-          goto create_sp_error;
-      }
+        goto create_sp_error;
     }
 
     name= lex->sphead->name(&namelen);
@@ -4811,7 +4802,7 @@ create_sp_error:
       char *name= lex->spname->m_name.str;
 
       if (check_routine_access(thd, ALTER_PROC_ACL, db, name,
-                               lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
+                                 lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
         goto error;
 
       /* Conditionally writes to binlog */
