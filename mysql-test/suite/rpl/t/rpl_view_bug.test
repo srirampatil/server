@@ -1,11 +1,4 @@
 source include/master-slave.inc;
---disable_warnings
-drop table if exists t1;
-drop view if exists v1,v2;
-sync_slave_with_master;
-reset master;
---enable_warnings
-
 --echo #
 --echo # Check the bug where if n error occurs in mysql_register_view the view
 --echo # is still replicated to the slave
@@ -29,5 +22,9 @@ CREATE VIEW v2 as SELECT * FROM t1;
 show tables;
 sync_slave_with_master;
 show tables;
+
+connection master;
+DROP VIEW IF EXISTS v1;
+DROP TABLE t1;
 
 --source include/rpl_end.inc

@@ -1,0 +1,46 @@
+include/master-slave.inc
+[connection master]
+CREATE USER u1@localhost IDENTIFIED BY 'abcdefghijk';
+SELECT CURRENT_USER;
+CURRENT_USER
+u1@localhost
+CREATE USER IF NOT EXISTS u2@localhost;
+SELECT CURRENT_USER;
+CURRENT_USER
+u2@localhost
+CREATE OR REPLACE USER u1@localhost IDENTIFIED BY 'abcdefghijk';
+SELECT CURRENT_USER;
+CURRENT_USER
+u1@localhost
+SELECT User FROM mysql.user;
+User
+root
+root
+root
+u1
+u2
+root
+CREATE USER u1@localhost;
+ERROR HY000: Operation CREATE USER failed for 'u1'@'localhost'
+DROP USER u3@localhost;
+ERROR HY000: Operation DROP USER failed for 'u3'@'localhost'
+SELECT User FROM mysql.user;
+User
+root
+root
+root
+u1
+u2
+root
+DROP USER IF EXISTS u1@localhost;
+DROP USER u2@localhost;
+DROP USER IF EXISTS u3@localhost;
+Warnings:
+Note	1968	Can't drop 'u3'; it doesn't exist
+SELECT User FROM mysql.user;
+User
+root
+root
+root
+root
+include/rpl_end.inc
