@@ -607,6 +607,93 @@ end:
   DBUG_RETURN(result);
 }
 
+/**
+  Build stmt_query to write it in the bin-log.
+
+  @param thd           current thread context (including trigger definition in
+                       LEX)
+  @param tables        table list containing one open table for which the
+                       trigger is created.
+  @param[out] stmt_query    after successful return, this string contains
+                            well-formed statement for creation this trigger.
+
+  @note
+    - Assumes that trigger name is fully qualified.
+    - NULL-string means the following LEX_STRING instance:
+    { str = 0; length = 0 }.
+    - In other words, definer_user and definer_host should contain
+    simultaneously NULL-strings (non-SUID/old trigger) or valid strings
+    (SUID/new trigger).
+
+  @retval
+    False   success
+  @retval
+    True    error
+*/
+static bool build_trig_stmt_query(THD *thd, TABLE_LIST *tables, String *stmt_query,
+                           LEX_STRING *trg_definer, char trg_definer_holder[])
+{
+  LEX *lex = thd->lex;
+  LEX_STRING definer_user;
+  LEX_STRING definer_host;
+
+  if(trg_definer == NULL
+     && !(trg_definer= alloc_lex_string(&tables->table->mem_root)))
+      return TRUE;
+
+  if (lex->sphead->m_chistics->suid != SP_IS_NOT_SUID)
+  {
+    /* SUID trigger. */
+
+    definer_user= lex->definer->user;
+    definer_host= lex->definer->host;
+
+    lex->definer->set_lex_string(trg_definer, trg_definer_holder);
+  }
+  else
+  {
+    /* non-SUID trigger. */
+
+    definer_user.str= 0;
+    definer_user.length= 0;
+
+    definer_host.str= 0;
+    definer_host.length= 0;
+
+    trg_definer->str= (char*) "";
+    trg_definer->length= 0;
+  }
+
+  /*
+    Create well-formed trigger definition query. Original query is not
+    appropriated, because definer-clause can be not truncated.
+  */
+
+  stmt_query->append(STRING_WITH_LEN("CREATE "));
+
+  if (lex->is_create_or_replace())
+    stmt_query->append(STRING_WITH_LEN("OR REPLACE "));
+
+  if (lex->sphead->m_chistics->suid != SP_IS_NOT_SUID)
+  {
+    /*
+      Append definer-clause if the trigger is SUID (a usual trigger in
+      new MySQL versions).
+    */
+
+    append_definer(thd, stmt_query, &definer_user, &definer_host);
+  }
+
+  LEX_STRING stmt_definition;
+  stmt_definition.str= (char*) thd->lex->stmt_definition_begin;
+  stmt_definition.length= thd->lex->stmt_definition_end
+    - thd->lex->stmt_definition_begin;
+  trim_whitespace(thd->charset(), & stmt_definition);
+
+  stmt_query->append(stmt_definition.str, stmt_definition.length);
+
+  return FALSE;
+}
 
 /**
   Create trigger for table.
@@ -639,11 +726,9 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   char file_buff[FN_REFLEN], trigname_buff[FN_REFLEN];
   LEX_STRING file, trigname_file;
   LEX_STRING *trg_def;
-  LEX_STRING definer_user;
-  LEX_STRING definer_host;
   ulonglong *trg_sql_mode;
   char trg_definer_holder[USER_HOST_BUFF_SIZE];
-  LEX_STRING *trg_definer;
+  LEX_STRING *trg_definer= NULL;
   Item_trigger_field *trg_field;
   struct st_trigname trigname;
   LEX_STRING *trg_client_cs_name;
@@ -742,6 +827,11 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
       push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
                           ER_TRG_ALREADY_EXISTS, ER(ER_TRG_ALREADY_EXISTS),
                           trigname_buff);
+
+      if (build_trig_stmt_query(thd, tables, stmt_query, trg_definer,
+                            trg_definer_holder))
+        return 1;
+
       return 0;
     }
     else
@@ -789,29 +879,6 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
 
   *trg_sql_mode= thd->variables.sql_mode;
 
-  if (lex->sphead->m_chistics->suid != SP_IS_NOT_SUID)
-  {
-    /* SUID trigger. */
-
-    definer_user= lex->definer->user;
-    definer_host= lex->definer->host;
-
-    lex->definer->set_lex_string(trg_definer, trg_definer_holder);
-  }
-  else
-  {
-    /* non-SUID trigger. */
-
-    definer_user.str= 0;
-    definer_user.length= 0;
-
-    definer_host.str= 0;
-    definer_host.length= 0;
-
-    trg_definer->str= (char*) "";
-    trg_definer->length= 0;
-  }
-
   /*
     Fill character set information:
       - client character set contains charset info only;
@@ -827,30 +894,8 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   lex_string_set(trg_db_cl_name,
                  get_default_db_collation(thd, tables->db)->name);
 
-  /*
-    Create well-formed trigger definition query. Original query is not
-    appropriated, because definer-clause can be not truncated.
-  */
-
-  stmt_query->append(STRING_WITH_LEN("CREATE "));
-
-  if (lex->sphead->m_chistics->suid != SP_IS_NOT_SUID)
-  {
-    /*
-      Append definer-clause if the trigger is SUID (a usual trigger in
-      new MySQL versions).
-    */
-
-    append_definer(thd, stmt_query, &definer_user, &definer_host);
-  }
-
-  LEX_STRING stmt_definition;
-  stmt_definition.str= (char*) thd->lex->stmt_definition_begin;
-  stmt_definition.length= thd->lex->stmt_definition_end
-    - thd->lex->stmt_definition_begin;
-  trim_whitespace(thd->charset(), & stmt_definition);
-
-  stmt_query->append(stmt_definition.str, stmt_definition.length);
+  build_trig_stmt_query(thd, tables, stmt_query, trg_definer,
+                        trg_definer_holder);
 
   trg_def->str= stmt_query->c_ptr_safe();
   trg_def->length= stmt_query->length();
