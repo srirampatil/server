@@ -1,4 +1,4 @@
-source include/master-slave.inc;
+--source include/master-slave.inc
 
 connection master;
 
