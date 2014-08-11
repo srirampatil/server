@@ -1962,6 +1962,15 @@ typedef struct st_key_create_information
     directly by the user (set by the parser).
   */
   bool check_for_duplicate_indexes;
+
+  uint options;
+
+  inline bool is_create_or_replace()
+  { return (options & HA_LEX_CREATE_REPLACE); }
+
+  inline bool is_create_if_not_exists()
+  { return (options & HA_LEX_CREATE_IF_NOT_EXISTS); }
+
 } KEY_CREATE_INFO;
 
 

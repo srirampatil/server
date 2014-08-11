@@ -114,8 +114,7 @@ Key::Key(const Key &rhs, MEM_ROOT *mem_root)
   columns(rhs.columns, mem_root),
   name(rhs.name),
   option_list(rhs.option_list),
-  generated(rhs.generated),
-  create_if_not_exists(rhs.create_if_not_exists)
+  generated(rhs.generated)
 {
   list_copy_and_replace_each_value(columns, mem_root);
 }

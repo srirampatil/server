@@ -5804,7 +5804,7 @@ handle_if_exists_options(THD *thd, TABLE *table, Alter_info *alter_info)
     const char *keyname;
     while ((key=key_it++))
     {
-      if (!key->create_if_not_exists)
+      if (!key->is_create_if_not_exists() && !key->is_create_or_replace())
         continue;
       /* If the name of the key is not specified,     */
       /* let us check the name of the first key part. */
@@ -5846,22 +5846,38 @@ handle_if_exists_options(THD *thd, TABLE *table, Alter_info *alter_info)
       }
       if (remove_key)
       {
-        push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
-            ER_DUP_KEYNAME, ER(ER_DUP_KEYNAME), keyname);
-        key_it.remove();
-        if (key->type == Key::FOREIGN_KEY)
+        if (key->is_create_if_not_exists())
         {
-          /* ADD FOREIGN KEY appends two items. */
+          push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
+              ER_DUP_KEYNAME, ER(ER_DUP_KEYNAME), keyname);
           key_it.remove();
+          if (key->type == Key::FOREIGN_KEY)
+          {
+            /* ADD FOREIGN KEY appends two items. */
+            key_it.remove();
+          }
+          if (alter_info->key_list.is_empty())
+            alter_info->flags&= ~(Alter_info::ALTER_ADD_INDEX |
+                Alter_info::ADD_FOREIGN_KEY);
+          break;
         }
-        if (alter_info->key_list.is_empty())
-          alter_info->flags&= ~(Alter_info::ALTER_ADD_INDEX |
-              Alter_info::ADD_FOREIGN_KEY);
-        break;
+        else if (key->is_create_or_replace())
+        {
+          Alter_drop::drop_type type = (key->type == Key::FOREIGN_KEY) ?
+            Alter_drop::FOREIGN_KEY : Alter_drop::KEY;
+          Alter_drop *ad = new Alter_drop(type, key->name.str, FALSE);
+
+          if(ad == NULL)
+            // Return error
+
+          // Adding the index into the drop list for replacing
+          alter_info->flags |= Alter_info::ALTER_DROP_INDEX;
+          alter_info->drop_list.push_back(ad);
+        }
       }
     }
   }
-  
+
 #ifdef WITH_PARTITION_STORAGE_ENGINE
   partition_info *tab_part_info= table->part_info;
   if (tab_part_info && thd->lex->check_exists)
@@ -7582,7 +7598,7 @@ mysql_prepare_alter_table(THD *thd, TABLE *table,
       key= new Key(key_type, key_name, strlen(key_name),
                    &key_create_info,
                    MY_TEST(key_info->flags & HA_GENERATED_KEY),
-                   key_parts, key_info->option_list, FALSE);
+                   key_parts, key_info->option_list);
       new_key_list.push_back(key);
     }
   }

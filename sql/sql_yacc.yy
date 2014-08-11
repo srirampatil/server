@@ -752,8 +752,18 @@ bool setup_select_in_parentheses(LEX *lex)
   return FALSE;
 }
 
-static bool add_create_index_prepare (LEX *lex, Table_ident *table)
+static bool add_create_index_prepare (LEX *lex, Table_ident *table,
+                                      uint create_or_replace,
+                                      uint create_if_not_exists)
 {
+  if (create_or_replace && create_if_not_exists)
+  {
+    my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
+    return TRUE;
+  }
+
+  lex->key_create_info.options = (create_or_replace | create_if_not_exists);
+
   lex->sql_command= SQLCOM_CREATE_INDEX;
   if (!lex->current_select->add_table_to_list(lex->thd, table, NULL,
                                               TL_OPTION_UPDATING,
@@ -772,9 +782,17 @@ static bool add_create_index (LEX *lex, Key::Keytype type,
                               const LEX_STRING &name,
                               KEY_CREATE_INFO *info= NULL, bool generated= 0)
 {
+  if (lex->check_exists)
+  {
+    if (info)
+      info->options |= HA_LEX_CREATE_IF_NOT_EXISTS;
+    else
+      lex->key_create_info.options |= HA_LEX_CREATE_IF_NOT_EXISTS;
+  }
+
   Key *key;
-  key= new Key(type, name, info ? info : &lex->key_create_info, generated, 
-               lex->col_list, lex->option_list, lex->check_exists);
+  key= new Key(type, name, info ? info : &lex->key_create_info, generated,
+               lex->col_list, lex->option_list);
   if (key == NULL)
     return TRUE;
 
@@ -2391,9 +2409,9 @@ create:
             }
             create_table_set_open_action_and_adjust_tables(lex);
           }
-        | CREATE opt_unique INDEX_SYM opt_if_not_exists ident key_alg ON table_ident
+        | create_or_replace opt_unique INDEX_SYM opt_if_not_exists ident key_alg ON table_ident
           {
-            if (add_create_index_prepare(Lex, $8))
+            if (add_create_index_prepare(Lex, $8, $1, $4))
               MYSQL_YYABORT;
           }
           '(' key_list ')' normal_key_options
@@ -2402,10 +2420,10 @@ create:
               MYSQL_YYABORT;
           }
           opt_index_lock_algorithm { }
-        | CREATE fulltext INDEX_SYM opt_if_not_exists ident init_key_options ON
+        | create_or_replace fulltext INDEX_SYM opt_if_not_exists ident init_key_options ON
           table_ident
           {
-            if (add_create_index_prepare(Lex, $8))
+            if (add_create_index_prepare(Lex, $8, $1, $4))
               MYSQL_YYABORT;
           }
           '(' key_list ')' fulltext_key_options
@@ -2414,10 +2432,10 @@ create:
               MYSQL_YYABORT;
           }
           opt_index_lock_algorithm { }
-        | CREATE spatial INDEX_SYM opt_if_not_exists ident init_key_options ON
+        | create_or_replace spatial INDEX_SYM opt_if_not_exists ident init_key_options ON
           table_ident
           {
-            if (add_create_index_prepare(Lex, $8))
+            if (add_create_index_prepare(Lex, $8, $1, $4))
               MYSQL_YYABORT;
           }
           '(' key_list ')' spatial_key_options
@@ -5993,8 +6011,11 @@ key_def:
                                       lex->ref_list,
                                       lex->fk_delete_opt,
                                       lex->fk_update_opt,
-                                      lex->fk_match_option,
-                                      lex->check_exists);
+                                      lex->fk_match_option);
+
+            if (lex->check_exists)
+              key->key_create_info.options |= HA_LEX_CREATE_IF_NOT_EXISTS;
+
             if (key == NULL)
               MYSQL_YYABORT;
             lex->alter_info.key_list.push_back(key);
