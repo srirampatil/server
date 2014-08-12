@@ -5867,12 +5867,12 @@ handle_if_exists_options(THD *thd, TABLE *table, Alter_info *alter_info)
             Alter_drop::FOREIGN_KEY : Alter_drop::KEY;
           Alter_drop *ad = new Alter_drop(type, key->name.str, FALSE);
 
-          if(ad == NULL)
-            // Return error
-
-          // Adding the index into the drop list for replacing
-          alter_info->flags |= Alter_info::ALTER_DROP_INDEX;
-          alter_info->drop_list.push_back(ad);
+          if (ad != NULL)
+          {
+            // Adding the index into the drop list for replacing
+            alter_info->flags |= Alter_info::ALTER_DROP_INDEX;
+            alter_info->drop_list.push_back(ad);
+          }
         }
       }
     }
