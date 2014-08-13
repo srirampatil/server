@@ -1,0 +1,26 @@
+include/master-slave.inc
+[connection master]
+CREATE DATABASE db1;
+CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+CREATE OR REPLACE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+ERROR HY000: Event 'event_1' already exists
+SHOW DATABASES LIKE 'db1';
+Database (db1)
+db1
+SET GLOBAL event_scheduler=1;
+SHOW DATABASES LIKE 'db1';
+Database (db1)
+SET GLOBAL event_scheduler=off;
+DROP DATABASE db1;
+ERROR HY000: Can't drop database 'db1'; database doesn't exist
+# Syncing slave with master
+SHOW CREATE EVENT event_1;
+Event	sql_mode	time_zone	Create Event	character_set_client	collation_connection	Database Collation
+event_1		SYSTEM	CREATE DEFINER=`root`@`localhost` EVENT `event_1` ON SCHEDULE EVERY 1 SECOND STARTS '2014-08-13 11:20:04' ON COMPLETION NOT PRESERVE DISABLE ON SLAVE DO DROP DATABASE db1	latin1	latin1_swedish_ci	latin1_swedish_ci
+SHOW DATABASES like 'db1';
+Database (db1)
+DROP DATABASE db1;
+ERROR HY000: Can't drop database 'db1'; database doesn't exist
+DROP EVENT IF EXISTS event_1;
+include/rpl_end.inc

@@ -1,0 +1,29 @@
+--source include/master-slave.inc
+
+connection master;
+CREATE DATABASE db1;
+CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+CREATE OR REPLACE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+
+--error ER_EVENT_ALREADY_EXISTS
+CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
+
+SHOW DATABASES LIKE 'db1';
+SET GLOBAL event_scheduler=1;
+let $wait_condition= SELECT count(*)= 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE
+SCHEMA_NAME LIKE 'db1';
+--source include/wait_condition.inc
+SHOW DATABASES LIKE 'db1';
+SET GLOBAL event_scheduler=off;
+--error ER_DB_DROP_EXISTS
+DROP DATABASE db1;
+--echo # Syncing slave with master
+sync_slave_with_master;
+SHOW CREATE EVENT event_1;
+SHOW DATABASES like 'db1';
+connection master;
+--error ER_DB_DROP_EXISTS
+DROP DATABASE db1;
+DROP EVENT IF EXISTS event_1;
+sync_slave_with_master;
+--source include/rpl_end.inc
