@@ -1035,7 +1035,19 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
 
         // Setting retstr as it is used for logging.
         if (sp->m_type == TYPE_ENUM_FUNCTION)
+        {
           sp_returns_type(thd, retstr, sp);
+
+          store_failed= store_failed ||
+            table->field[MYSQL_PROC_FIELD_RETURNS]->
+              store(retstr.ptr(), retstr.length(), system_charset_info);
+        }
+
+        if (store_failed)
+        {
+          ret= SP_FLD_STORE_FAILED;
+          goto done;
+        }
 
         goto log;
       }
@@ -1109,14 +1121,6 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
       table->field[MYSQL_PROC_FIELD_PARAM_LIST]->
         store(sp->m_params.str, sp->m_params.length, system_charset_info);
 
-    store_failed= store_failed ||
-      table->field[MYSQL_PROC_FIELD_BODY]->
-        store(sp->m_body.str, sp->m_body.length, system_charset_info);
-
-    store_failed= store_failed ||
-      table->field[MYSQL_PROC_FIELD_DEFINER]->
-        store(definer.str, definer.length, system_charset_info);
-
     if (sp->m_type == TYPE_ENUM_FUNCTION)
     {
       sp_returns_type(thd, retstr, sp);
@@ -1125,6 +1129,14 @@ sp_create_routine(THD *thd, stored_procedure_type type, sp_head *sp)
         table->field[MYSQL_PROC_FIELD_RETURNS]->
           store(retstr.ptr(), retstr.length(), system_charset_info);
     }
+
+    store_failed= store_failed ||
+      table->field[MYSQL_PROC_FIELD_BODY]->
+        store(sp->m_body.str, sp->m_body.length, system_charset_info);
+
+    store_failed= store_failed ||
+      table->field[MYSQL_PROC_FIELD_DEFINER]->
+        store(definer.str, definer.length, system_charset_info);
 
     ((Field_timestamp *)table->field[MYSQL_PROC_FIELD_CREATED])->set_time();
     ((Field_timestamp *)table->field[MYSQL_PROC_FIELD_MODIFIED])->set_time();
