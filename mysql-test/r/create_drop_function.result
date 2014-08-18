@@ -27,4 +27,4 @@ RETURN CONCAT('Hello, ', str, '!');
 SELECT f1('world');
 f1('world')
 Hello, world!
-DROP FUNCTION IF EXISTS f1;
+DROP FUNCTION f1;

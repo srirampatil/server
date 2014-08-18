@@ -1,3 +1,5 @@
+--source include/not_embedded.inc
+
 CREATE USER u1@localhost;
 CREATE USER IF NOT EXISTS u1@localhost;
 CREATE OR REPLACE USER u1@localhost;

@@ -17,6 +17,7 @@ SELECT * FROM mysql.func WHERE name like 'metaphon';
 
 --error ER_UDF_EXISTS
 eval CREATE FUNCTION metaphon RETURNS STRING SONAME "$UDF_EXAMPLE_SO";
+SELECT metaphon('mariadb');
 
 DROP FUNCTION metaphon;
 DROP FUNCTION IF EXISTS metaphon;

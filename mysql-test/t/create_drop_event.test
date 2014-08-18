@@ -1,3 +1,5 @@
+--source include/not_embedded.inc
+
 CREATE DATABASE db1;
 CREATE EVENT event_1 ON SCHEDULE EVERY 1 SECOND DO DROP DATABASE db1;
 SHOW DATABASES LIKE 'db1';

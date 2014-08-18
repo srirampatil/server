@@ -1,6 +1,7 @@
 CREATE FUNCTION f1(str char(20))
 RETURNS TEXT
 RETURN CONCAT('Hello, ', str, '!');
+SELECT * FROM mysql.proc WHERE name like 'f1';
 SELECT f1('world');
 
 --error ER_SP_ALREADY_EXISTS
@@ -27,4 +28,4 @@ RETURNS TEXT
 RETURN CONCAT('Hello, ', str, '!');
 SELECT f1('world');
 
-DROP FUNCTION IF EXISTS f1;
+DROP FUNCTION f1;

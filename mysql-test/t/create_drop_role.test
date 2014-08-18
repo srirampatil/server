@@ -1,3 +1,5 @@
+--source include/not_embedded.inc
+
 CREATE ROLE role_1;
 
 CREATE ROLE IF NOT EXISTS role_1;
