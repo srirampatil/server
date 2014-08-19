@@ -6,6 +6,7 @@ db1
 SET GLOBAL event_scheduler=1;
 SHOW DATABASES LIKE 'db1';
 Database (db1)
+db1
 SET GLOBAL event_scheduler=off;
 DROP DATABASE db1;
 ERROR HY000: Can't drop database 'db1'; database doesn't exist
@@ -24,6 +25,7 @@ db1
 SET GLOBAL event_scheduler=1;
 SHOW DATABASES LIKE 'db1';
 Database (db1)
+db1
 SET GLOBAL event_scheduler=off;
 DROP DATABASE db1;
 ERROR HY000: Can't drop database 'db1'; database doesn't exist

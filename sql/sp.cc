@@ -835,6 +835,8 @@ db_load_routine(THD *thd, stored_procedure_type type,
 
   thd->lex= &newlex;
   newlex.current_select= NULL;
+  // Resetting all the flags in create_info
+  newlex.create_info.options= 0;
 
   defstr.set_charset(creation_ctx->get_client_cs());
 
@@ -2202,10 +2204,9 @@ create_string(THD *thd, String *buf,
 
   thd->variables.sql_mode= sql_mode;
 
+  buf->append(STRING_WITH_LEN("CREATE "));
   if(thd->lex->is_create_or_replace())
-    buf->append(STRING_WITH_LEN("CREATE OR REPLACE "));
-  else
-    buf->append(STRING_WITH_LEN("CREATE "));
+    buf->append(STRING_WITH_LEN("OR REPLACE "));
 
   append_definer(thd, buf, definer_user, definer_host);
   if (type == TYPE_ENUM_FUNCTION)
